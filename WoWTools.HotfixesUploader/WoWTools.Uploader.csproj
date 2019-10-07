@@ -4,6 +4,10 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>netcoreapp3.0</TargetFramework>
     <UseWPF>true</UseWPF>
+    <ApplicationIcon>images\cog.ico</ApplicationIcon>
+    <Authors>Marlamin</Authors>
+    <Company>WoW.tools</Company>
+    <Product>WoW.Tools Uploader</Product>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,6 +27,12 @@
     <Resource Include="images\cog_upload.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="WoWTools.Uploader.dll.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
 </Project>

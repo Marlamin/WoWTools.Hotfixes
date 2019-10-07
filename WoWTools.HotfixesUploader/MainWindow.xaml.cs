@@ -22,6 +22,21 @@ namespace WoWTools.Uploader
         {
             InitializeComponent();
 
+            var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None).AppSettings.Settings;
+            Console.WriteLine(config.Count);
+            if (bool.Parse(config["firstRun"].Value) == false)
+            {
+                CheckAndStart();
+                TBIcon.Visibility = Visibility.Visible;
+            }
+            else
+            {
+                LoadSettings();
+            }
+        }
+
+        private void CheckAndStart()
+        {
             Width = 0;
             Height = 0;
             WindowStyle = WindowStyle.None;
@@ -29,28 +44,27 @@ namespace WoWTools.Uploader
             ShowActivated = false;
             this.Visibility = Visibility.Hidden;
 
-            ready = true;
-
             uploadWorker = new BackgroundWorker();
             uploadWorker.DoWork += UploadWorker_DoWork;
             uploadWorker.RunWorkerCompleted += UploadWorker_RunWorkerCompleted;
 
-            var config = ConfigurationManager.AppSettings;
-            if (string.IsNullOrWhiteSpace(config["installDir"]))
+            var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None).AppSettings.Settings;
+
+            if (string.IsNullOrWhiteSpace(config["installDir"].Value))
             {
                 Notify("Error during startup!", "Install directory not set, exiting..", BalloonIcon.Error);
                 ExitNicely();
                 ready = false;
             }
 
-            if (!File.Exists(Path.Combine(config["installDir"], ".build.info")))
+            if (!File.Exists(Path.Combine(config["installDir"].Value, ".build.info")))
             {
                 Notify("Error during startup!", ".build.info not found, exiting..", BalloonIcon.Error); ;
                 ExitNicely();
                 ready = false;
             }
 
-            cacheFolder = Path.Combine(config["installDir"], "_retail_", "Cache", "ADB", "enUS");
+            cacheFolder = Path.Combine(config["installDir"].Value, "_retail_", "Cache", "ADB", "enUS");
 
             if (!Directory.Exists(cacheFolder))
             {
@@ -165,6 +179,112 @@ namespace WoWTools.Uploader
         {
             TBIcon.Visibility = Visibility.Collapsed;
             Environment.Exit(1);
+        }
+
+        private void SaveButton_Click(object sender, RoutedEventArgs e)
+        {
+            var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+
+            config.AppSettings.Settings["firstRun"].Value = "false";
+            config.AppSettings.Settings["installDir"].Value = BaseDir.Text;
+            config.AppSettings.Settings["APIToken"].Value = APIToken.Text;
+
+            Console.WriteLine(config.FilePath);
+            config.Save(ConfigurationSaveMode.Modified);
+
+            System.Diagnostics.Process.Start(Application.ResourceAssembly.Location.Replace(".dll", ".exe"));
+            Application.Current.Shutdown();
+        }
+
+        private void CheckButton_Click(object sender, RoutedEventArgs e)
+        {
+            CheckWoWDir();
+        }
+
+        private void CheckWoWDir()
+        {
+            var givenPath = BaseDir.Text;
+
+            var validDir = false;
+            if (Directory.Exists(givenPath))
+            {
+                if (File.Exists(Path.Combine(givenPath, ".build.info")))
+                {
+                    validDir = true;
+                }
+            }
+
+            if (validDir)
+            {
+                SaveButton.Content = "Save";
+                SaveButton.IsEnabled = true;
+            }
+            else
+            {
+                SaveButton.Content = "Select a valid WoW directory and check it first";
+                SaveButton.IsEnabled = false;
+            }
+        }
+
+        private void LoadSettings()
+        {
+            var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None).AppSettings.Settings;
+
+            Width = 475;
+            Height = 200;
+            WindowStyle = WindowStyle.ToolWindow;
+            ShowInTaskbar = true;
+            ShowActivated = true;
+            this.Visibility = Visibility.Visible;
+
+            SaveButton.Content = "Select a valid WoW directory and check it first";
+            SaveButton.IsEnabled = false;
+
+            if (string.IsNullOrWhiteSpace(config["installDir"].Value))
+            {
+                try
+                {
+                    using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey("SOFTWARE\\WOW6432Node\\Blizzard Entertainment\\World of Warcraft"))
+                    {
+                        if (key != null)
+                        {
+                            var obj = key.GetValue("InstallPath");
+                            if (obj != null)
+                            {
+                                var wowLoc = (string)obj;
+                                wowLoc = wowLoc.Replace("_retail_", "").Replace("_classic_", "").Replace("_ptr_", "").Replace("_classic_beta_", "").Replace("_beta_", "").Replace("\\\\", "");
+                                BaseDir.Text = wowLoc;
+                                CheckWoWDir();
+                            }
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("Unable to get WoW install path from registry. Falling back to online mode! Error: " + ex.Message);
+                }
+            }
+            else
+            {
+                BaseDir.Text = config["installDir"].Value;
+                CheckWoWDir();
+            }
+
+            if (!string.IsNullOrWhiteSpace(config["APIToken"].Value))
+            {
+                APIToken.Text = config["APIToken"].Value;
+            }
+        }
+
+        private void Settings_PreviewMouseUp(object sender, MouseButtonEventArgs e)
+        {
+            LoadSettings();
+        }
+
+        private void BaseDir_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)
+        {
+            SaveButton.Content = "Select a valid WoW directory and check it first";
+            SaveButton.IsEnabled = false;
         }
     }
 }

@@ -6,15 +6,28 @@
         xmlns:tb="http://www.hardcodet.net/taskbar"
         xmlns:local="clr-namespace:WoWTools.Uploader"
         mc:Ignorable="d"
-        Title="WoW.Tools Hotfixes Uploader" Height="450" Width="800">
+        Icon="pack://application:,,,/WoWTools.Uploader;component/images/cog.ico" Title="WoW.Tools Hotfixes Uploader" Height="200" Width="475">
     <Grid>
-        <tb:TaskbarIcon Name="TBIcon" IconSource="pack://application:,,,/WoWTools.Uploader;component/images/cog.ico" ToolTipText="WoW.Tools Uploader" MenuActivation="RightClick" NoLeftClickDelay="True">
+        <tb:TaskbarIcon Visibility="Collapsed" Name="TBIcon" IconSource="pack://application:,,,/WoWTools.Uploader;component/images/cog.ico" ToolTipText="WoW.Tools Uploader" MenuActivation="RightClick" NoLeftClickDelay="True">
             <tb:TaskbarIcon.ContextMenu>
                 <ContextMenu Name="IconContextMenu">
                     <MenuItem Name="Upload" Header="Upload" PreviewMouseUp="Upload_PreviewMouseUp" />
+                    <MenuItem Name="Settings" Header="Settings" PreviewMouseUp="Settings_PreviewMouseUp" />
                     <MenuItem Name="Exit" Header="Exit" PreviewMouseUp="Exit_PreviewMouseUp" />
                 </ContextMenu>
             </tb:TaskbarIcon.ContextMenu>
         </tb:TaskbarIcon>
+        <!-- API Token -->
+        <TextBox x:Name="APIToken" HorizontalAlignment="Left" Margin="138,14,0,0" Text="" TextWrapping="Wrap" VerticalAlignment="Top" Width="299"/>
+        <Label Content="WoW.Tools API token" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top"/>
+        <Label Content="You can find this on WoW.tools/uploader.php after logging in" HorizontalAlignment="Left" Margin="147,32,0,0" VerticalAlignment="Top" FontSize="10" Height="25"/>
+
+        <!-- Directory -->
+        <Label Content="WoW Directory" HorizontalAlignment="Left" Margin="10,70,0,0" VerticalAlignment="Top" Width="123"/>
+        <TextBox x:Name="BaseDir" HorizontalAlignment="Left" Margin="138,74,0,0" Text="" TextWrapping="Wrap" TextChanged="BaseDir_TextChanged" VerticalAlignment="Top" Width="252" />
+        <Button Content="Check" x:Name="CheckButton" HorizontalAlignment="Left" Margin="395,73,0,0" Click="CheckButton_Click" VerticalAlignment="Top" Width="42"/>
+        <Label Content="Enter path of folder that has a _retail_ subfolder and click check" HorizontalAlignment="Left" Margin="145,92,0,0" VerticalAlignment="Top" FontSize="10" Height="25"/>
+
+        <Button Content="Select a valid WoW directory first" IsEnabled="False" x:Name="SaveButton" HorizontalAlignment="Left" Margin="10,126,0,0" Click="SaveButton_Click" VerticalAlignment="Top" Width="427"/>
     </Grid>
 </Window>
