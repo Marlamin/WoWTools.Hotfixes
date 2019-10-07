@@ -1,4 +1,5 @@
 ﻿using Hardcodet.Wpf.TaskbarNotification;
+using Microsoft.Win32;
 using System;
 using System.ComponentModel;
 using System.Configuration;
@@ -144,7 +145,7 @@ namespace WoWTools.Uploader
                 cacheStream.CopyTo(memStream);
 
                 webClient.DefaultRequestHeaders.Add("WT-BuildInfo", Convert.ToBase64String(File.ReadAllBytes(Path.Combine(ConfigurationManager.AppSettings["installDir"], ".build.info"))));
-                webClient.DefaultRequestHeaders.Add("WT-UserToken", ConfigurationManager.AppSettings["userToken"]);
+                webClient.DefaultRequestHeaders.Add("WT-UserToken", ConfigurationManager.AppSettings["APIToken"]);
                 var fileBytes = memStream.ToArray();
 
                 MultipartFormDataContent form = new MultipartFormDataContent();
@@ -189,8 +190,18 @@ namespace WoWTools.Uploader
             config.AppSettings.Settings["installDir"].Value = BaseDir.Text;
             config.AppSettings.Settings["APIToken"].Value = APIToken.Text;
 
-            Console.WriteLine(config.FilePath);
             config.Save(ConfigurationSaveMode.Modified);
+
+            RegistryKey rk = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
+
+            if ((bool)StartupBox.IsChecked)
+            {
+                rk.SetValue("WoW.tools Uploader", Application.ResourceAssembly.Location.Replace(".dll", ".exe"), RegistryValueKind.String);
+            }
+            else
+            {
+                rk.DeleteValue("WoW.tools Uploader", false);
+            }
 
             System.Diagnostics.Process.Start(Application.ResourceAssembly.Location.Replace(".dll", ".exe"));
             Application.Current.Shutdown();
@@ -231,7 +242,7 @@ namespace WoWTools.Uploader
             var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None).AppSettings.Settings;
 
             Width = 475;
-            Height = 200;
+            Height = 250;
             WindowStyle = WindowStyle.ToolWindow;
             ShowInTaskbar = true;
             ShowActivated = true;
@@ -244,7 +255,7 @@ namespace WoWTools.Uploader
             {
                 try
                 {
-                    using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey("SOFTWARE\\WOW6432Node\\Blizzard Entertainment\\World of Warcraft"))
+                    using (var key = Registry.LocalMachine.OpenSubKey("SOFTWARE\\WOW6432Node\\Blizzard Entertainment\\World of Warcraft"))
                     {
                         if (key != null)
                         {
@@ -273,6 +284,13 @@ namespace WoWTools.Uploader
             if (!string.IsNullOrWhiteSpace(config["APIToken"].Value))
             {
                 APIToken.Text = config["APIToken"].Value;
+            }
+
+            RegistryKey rk = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
+
+            if(rk.GetValue("WoW.tools Uploader") != null)
+            {
+                StartupBox.IsChecked = true;
             }
         }
 
