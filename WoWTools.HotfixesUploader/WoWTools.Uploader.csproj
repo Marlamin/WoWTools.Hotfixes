@@ -8,6 +8,7 @@
     <Authors>Marlamin</Authors>
     <Company>WoW.tools</Company>
     <Product>WoW.Tools Uploader</Product>
+    <PackageProjectUrl>https://wow.tools/uploader.php</PackageProjectUrl>
   </PropertyGroup>
 
   <ItemGroup>
