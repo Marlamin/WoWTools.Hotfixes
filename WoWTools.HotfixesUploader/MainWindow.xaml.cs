@@ -15,7 +15,6 @@ namespace WoWTools.Uploader
     /// </summary>
     public partial class MainWindow : Window
     {
-        private bool ready = false;
         private string cacheFolder;
         private BackgroundWorker uploadWorker;
 
@@ -50,45 +49,13 @@ namespace WoWTools.Uploader
             uploadWorker.RunWorkerCompleted += UploadWorker_RunWorkerCompleted;
 
             var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None).AppSettings.Settings;
-
-            if (string.IsNullOrWhiteSpace(config["installDir"].Value))
-            {
-                Notify("Error during startup!", "Install directory not set, exiting..", BalloonIcon.Error);
-                ExitNicely();
-                ready = false;
-            }
-
-            if (!File.Exists(Path.Combine(config["installDir"].Value, ".build.info")))
-            {
-                Notify("Error during startup!", ".build.info not found, exiting..", BalloonIcon.Error); ;
-                ExitNicely();
-                ready = false;
-            }
-
             cacheFolder = Path.Combine(config["installDir"].Value, "_retail_", "Cache", "ADB", "enUS");
 
-            if (!Directory.Exists(cacheFolder))
-            {
-                Notify("Error during startup!", "No valid locale folder found in ADB directory, I only support enUS, exiting..", BalloonIcon.Error);
-                ExitNicely();
-                ready = false;
-            }
-
-            if (!File.Exists(Path.Combine(cacheFolder, "DBCache.bin")))
-            {
-                Notify("Error during startup!", "DBCache.bin not found, exiting..", BalloonIcon.Error);
-                ExitNicely();
-                ready = false;
-            }
-
-            if (ready)
-            {
-                var watcher = new FileSystemWatcher();
-                watcher.Renamed += Watcher_Renamed;
-                watcher.Path = cacheFolder;
-                watcher.Filter = "*.bin";
-                watcher.EnableRaisingEvents = true;
-            }
+            var watcher = new FileSystemWatcher();
+            watcher.Renamed += Watcher_Renamed;
+            watcher.Path = cacheFolder;
+            watcher.Filter = "*.bin";
+            watcher.EnableRaisingEvents = true;
         }
 
         private void UploadWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
@@ -110,7 +77,7 @@ namespace WoWTools.Uploader
 
         private void Watcher_Renamed(object sender, RenamedEventArgs e)
         {
-            if (Path.GetFileNameWithoutExtension(e.FullPath) != "DBCache")
+            if (Path.GetFileName(e.FullPath) != "DBCache.bin")
             {
                 return;
             }
@@ -129,6 +96,12 @@ namespace WoWTools.Uploader
 
         public HttpResponseMessage UploadCache()
         {
+            if(!File.Exists(Path.Combine(cacheFolder, "DBCache.bin")))
+            {
+                Application.Current.Dispatcher.Invoke(new Action(() => { Notify("Error reading cache!", "File not found", BalloonIcon.Error); }));
+                return new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest);
+            }
+
             using (var webClient = new HttpClient())
             using (var cacheStream = File.Open(Path.Combine(cacheFolder, "DBCache.bin"), FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             using (var memStream = new MemoryStream())
@@ -158,6 +131,7 @@ namespace WoWTools.Uploader
 
         private void Exit_PreviewMouseUp(object sender, MouseButtonEventArgs e)
         {
+            TBIcon.Visibility = Visibility.Collapsed;
             Environment.Exit(0);
         }
 
@@ -174,12 +148,6 @@ namespace WoWTools.Uploader
         {
             Console.WriteLine(title + ": " + message);
             TBIcon.ShowBalloonTip(title, message, icon);
-        }
-
-        private void ExitNicely()
-        {
-            TBIcon.Visibility = Visibility.Collapsed;
-            Environment.Exit(1);
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
@@ -219,7 +187,9 @@ namespace WoWTools.Uploader
             var validDir = false;
             if (Directory.Exists(givenPath))
             {
-                if (File.Exists(Path.Combine(givenPath, ".build.info")))
+                cacheFolder = Path.Combine(givenPath, "_retail_", "Cache", "ADB", "enUS");
+
+                if (Directory.Exists(cacheFolder) && File.Exists(Path.Combine(givenPath, ".build.info")))
                 {
                     validDir = true;
                 }
