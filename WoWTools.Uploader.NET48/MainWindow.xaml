@@ -1,0 +1,38 @@
+﻿<Window x:Class="WoWTools.Uploader.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:tb="http://www.hardcodet.net/taskbar"
+        xmlns:local="clr-namespace:WoWTools.Uploader"
+        mc:Ignorable="d"
+        Icon="pack://application:,,,/WoWTools.Uploader;component/images/cog.ico" Title="WoW.Tools Hotfixes Uploader" Height="250" Width="475">
+    <Grid>
+        <tb:TaskbarIcon Visibility="Collapsed" Name="TBIcon" IconSource="pack://application:,,,/WoWTools.Uploader;component/images/cog.ico" ToolTipText="WoW.Tools Uploader" MenuActivation="RightClick" NoLeftClickDelay="True">
+            <tb:TaskbarIcon.ContextMenu>
+                <ContextMenu Name="IconContextMenu">
+                    <MenuItem Name="Upload" Header="Upload" PreviewMouseUp="Upload_PreviewMouseUp" />
+                    <MenuItem Name="Settings" Header="Settings" PreviewMouseUp="Settings_PreviewMouseUp" />
+                    <MenuItem Name="Exit" Header="Exit" PreviewMouseUp="Exit_PreviewMouseUp" />
+                </ContextMenu>
+            </tb:TaskbarIcon.ContextMenu>
+        </tb:TaskbarIcon>
+        <!-- API Token -->
+        <TextBox x:Name="APIToken" HorizontalAlignment="Left" Margin="138,14,0,0" Text="" TextWrapping="Wrap" VerticalAlignment="Top" Width="299"/>
+        <Label Content="WoW.Tools API token" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top"/>
+        <Label Content="You can find this on WoW.tools/uploader.php after logging in" HorizontalAlignment="Left" Margin="147,32,0,0" VerticalAlignment="Top" FontSize="10" Height="25"/>
+
+        <!-- Directory -->
+        <Label Content="WoW Directory" HorizontalAlignment="Left" Margin="10,70,0,0" VerticalAlignment="Top" Width="123"/>
+        <TextBox x:Name="BaseDir" HorizontalAlignment="Left" Margin="138,74,0,0" Text="" TextWrapping="Wrap" TextChanged="BaseDir_TextChanged" VerticalAlignment="Top" Width="252" />
+        <Button Content="Check" x:Name="CheckButton" HorizontalAlignment="Left" Margin="395,73,0,0" Click="CheckButton_Click" VerticalAlignment="Top" Width="42"/>
+        <Label Content="Enter path of folder that has a '__retail__' subfolder and click check" HorizontalAlignment="Left" Margin="145,92,0,0" VerticalAlignment="Top" FontSize="10" Height="25"/>
+
+        <!-- Startup -->
+        <Label Content="Add to startup?" HorizontalAlignment="Left" Margin="10,117,0,0" VerticalAlignment="Top"/>
+        <CheckBox IsChecked="True" x:Name="StartupBox" HorizontalAlignment="Left" Margin="138,123,0,0" VerticalAlignment="Top"/>
+        <Label Content="This is required to automatically upload hotfixes after WoW closes" HorizontalAlignment="Left" Margin="154,119,0,0" VerticalAlignment="Top" FontSize="10" Height="25"/>
+
+        <Button Content="Select a valid WoW directory first" IsEnabled="False" x:Name="SaveButton" HorizontalAlignment="Left" Margin="10,152,0,0" Click="SaveButton_Click" VerticalAlignment="Top" Width="427"/>
+    </Grid>
+</Window>
