@@ -56,6 +56,16 @@ namespace WoWTools.Uploader
             watcher.Path = cacheFolder;
             watcher.Filter = "*.bin";
             watcher.EnableRaisingEvents = true;
+
+            var ptrFolder = Path.Combine(config["installDir"].Value, "_ptr_", "Cache", "ADB", "enUS");
+            if (Directory.Exists(ptrFolder))
+            {
+                var watcherPTR = new FileSystemWatcher();
+                watcherPTR.Renamed += Watcher_Renamed;
+                watcherPTR.Path = ptrFolder;
+                watcherPTR.Filter = "*.bin";
+                watcherPTR.EnableRaisingEvents = true;
+            }
         }
 
         private void UploadWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
@@ -82,7 +92,7 @@ namespace WoWTools.Uploader
                 return;
             }
 
-            uploadWorker.RunWorkerAsync();
+            uploadWorker.RunWorkerAsync(e.FullPath);
 
             // Set icon to uploading icon
             using var iconStream = Application.GetResourceStream(new Uri("pack://application:,,,/images/cog_upload.ico")).Stream;
@@ -91,19 +101,19 @@ namespace WoWTools.Uploader
 
         private void UploadWorker_DoWork(object sender, DoWorkEventArgs e)
         {
-            e.Result = UploadCache();
+            e.Result = UploadCache((string)e.Argument);
         }
 
-        public HttpResponseMessage UploadCache()
+        public HttpResponseMessage UploadCache(string path)
         {
-            if (!File.Exists(Path.Combine(cacheFolder, "DBCache.bin")))
+            if (!File.Exists(path))
             {
                 Application.Current.Dispatcher.Invoke(new Action(() => { Notify("Error reading cache!", "File not found", BalloonIcon.Error); }));
                 return new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest);
             }
 
             using (var webClient = new HttpClient())
-            using (var cacheStream = File.Open(Path.Combine(cacheFolder, "DBCache.bin"), FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (var cacheStream = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             using (var memStream = new MemoryStream())
             using (var bin = new BinaryReader(cacheStream))
             {
@@ -133,15 +143,6 @@ namespace WoWTools.Uploader
         {
             TBIcon.Visibility = Visibility.Collapsed;
             Environment.Exit(0);
-        }
-
-        private void Upload_PreviewMouseUp(object sender, MouseButtonEventArgs e)
-        {
-            // Set icon to uploading icon
-            using var iconStream = Application.GetResourceStream(new Uri("pack://application:,,,/images/cog_upload.ico")).Stream;
-            TBIcon.Icon = new System.Drawing.Icon(iconStream);
-
-            uploadWorker.RunWorkerAsync();
         }
 
         private void Notify(string title, string message, BalloonIcon icon)
