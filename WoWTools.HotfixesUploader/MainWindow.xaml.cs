@@ -5,6 +5,7 @@ using System.ComponentModel;
 using System.Configuration;
 using System.IO;
 using System.Net.Http;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Input;
 
@@ -119,11 +120,12 @@ namespace WoWTools.Uploader
 
                 webClient.DefaultRequestHeaders.Add("WT-BuildInfo", Convert.ToBase64String(File.ReadAllBytes(Path.Combine(ConfigurationManager.AppSettings["installDir"], ".build.info"))));
                 webClient.DefaultRequestHeaders.Add("WT-UserToken", ConfigurationManager.AppSettings["APIToken"]);
+                webClient.DefaultRequestHeaders.Add("User-Agent", "WoW.Tools uploader");
                 var fileBytes = memStream.ToArray();
 
                 MultipartFormDataContent form = new MultipartFormDataContent();
                 form.Add(new ByteArrayContent(fileBytes, 0, fileBytes.Length), "files", "DBCache.bin");
-                var result = webClient.PostAsync("https://wow.tools/api/cache/upload", form).Result;
+                var result = webClient.PostAsync("https://wow.tools/dbc/api/cache/upload", form).Result;
                 Console.WriteLine("Return status: " + result.StatusCode);
                 return result;
             }
