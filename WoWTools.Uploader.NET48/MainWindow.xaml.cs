@@ -66,6 +66,16 @@ namespace WoWTools.Uploader
                 watcherPTR.Filter = "*.bin";
                 watcherPTR.EnableRaisingEvents = true;
             }
+
+            var classicFolder = Path.Combine(config["installDir"].Value, "_classic_", "Cache", "ADB", "enUS");
+            if (Directory.Exists(classicFolder))
+            {
+                var watcherPTR = new FileSystemWatcher();
+                watcherPTR.Renamed += Watcher_Renamed;
+                watcherPTR.Path = classicFolder;
+                watcherPTR.Filter = "*.bin";
+                watcherPTR.EnableRaisingEvents = true;
+            }
         }
 
         private void UploadWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
