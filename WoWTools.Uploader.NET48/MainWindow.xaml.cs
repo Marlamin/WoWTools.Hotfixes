@@ -17,6 +17,7 @@ namespace WoWTools.Uploader
     {
         private string cacheFolder;
         private BackgroundWorker uploadWorker;
+        private bool showNotifications;
 
         public MainWindow()
         {
@@ -67,14 +68,26 @@ namespace WoWTools.Uploader
                 watcherPTR.EnableRaisingEvents = true;
             }
 
+            /*
             var classicFolder = Path.Combine(config["installDir"].Value, "_classic_", "Cache", "ADB", "enUS");
             if (Directory.Exists(classicFolder))
             {
-                var watcherPTR = new FileSystemWatcher();
-                watcherPTR.Renamed += Watcher_Renamed;
-                watcherPTR.Path = classicFolder;
-                watcherPTR.Filter = "*.bin";
-                watcherPTR.EnableRaisingEvents = true;
+                var watcherClassic = new FileSystemWatcher();
+                watcherClassic.Renamed += Watcher_Renamed;
+                watcherClassic.Path = classicFolder;
+                watcherClassic.Filter = "*.bin";
+                watcherClassic.EnableRaisingEvents = true;
+            }
+            */
+
+            var betaFolder = Path.Combine(config["installDir"].Value, "_beta_", "Cache", "ADB", "enUS");
+            if (Directory.Exists(betaFolder))
+            {
+                var watcherBeta = new FileSystemWatcher();
+                watcherBeta.Renamed += Watcher_Renamed;
+                watcherBeta.Path = betaFolder;
+                watcherBeta.Filter = "*.bin";
+                watcherBeta.EnableRaisingEvents = true;
             }
         }
 
@@ -87,7 +100,10 @@ namespace WoWTools.Uploader
             var result = (HttpResponseMessage)e.Result;
             if (result.IsSuccessStatusCode)
             {
-                Notify("Uploaded", "Cache succesfully uploaded!", BalloonIcon.Info);
+                if (showNotifications)
+                {
+                    Notify("Uploaded", "Cache succesfully uploaded!", BalloonIcon.Info);
+                }
             }
             else
             {
@@ -206,6 +222,20 @@ namespace WoWTools.Uploader
                 rk.DeleteValue("WoW.tools Uploader", false);
             }
 
+            if (config.AppSettings.Settings["showNotifications"] == null)
+            {
+                config.AppSettings.Settings.Add("showNotifications", "false");
+            }
+
+            if ((bool)NotificationBox.IsChecked)
+            {
+                config.AppSettings.Settings["showNotifications"].Value = "true";
+            }
+            else
+            {
+                config.AppSettings.Settings["showNotifications"].Value = "false";
+            }
+
             System.Diagnostics.Process.Start(Application.ResourceAssembly.Location.Replace(".dll", ".exe"));
             Application.Current.Shutdown();
         }
@@ -289,6 +319,15 @@ namespace WoWTools.Uploader
             if (config["APIToken"] != null && !string.IsNullOrWhiteSpace(config["APIToken"].Value))
             {
                 APIToken.Text = config["APIToken"].Value;
+            }
+
+            if (config["showNotifications"] == null || bool.Parse(config["showNotifications"].Value))
+            {
+                showNotifications = true;
+            }
+            else
+            {
+                showNotifications = false;
             }
 
             RegistryKey rk = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
