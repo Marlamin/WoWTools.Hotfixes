@@ -25,7 +25,7 @@
         <Label Content="WoW Directory" HorizontalAlignment="Left" Margin="10,70,0,0" VerticalAlignment="Top" Width="123"/>
         <TextBox x:Name="BaseDir" HorizontalAlignment="Left" Margin="138,74,0,0" Text="" TextWrapping="Wrap" TextChanged="BaseDir_TextChanged" VerticalAlignment="Top" Width="252" />
         <Button Content="Check" x:Name="CheckButton" HorizontalAlignment="Left" Margin="395,73,0,0" Click="CheckButton_Click" VerticalAlignment="Top" Width="42"/>
-        <Label Content="Enter path of folder that has a '__retail__' subfolder and click check." HorizontalAlignment="Left" Margin="145,92,0,0" VerticalAlignment="Top" FontSize="10" Height="25"/>
+        <Label Content="Enter path of folder that has a '__retail__' or '__beta__' subfolder and click check." HorizontalAlignment="Left" Margin="114,92,0,0" VerticalAlignment="Top" FontSize="10" Height="25"/>
 
         <!-- Startup -->
         <Label Content="Add to startup?" HorizontalAlignment="Left" Margin="10,117,0,0" VerticalAlignment="Top"/>
