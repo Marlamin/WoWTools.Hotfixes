@@ -81,6 +81,28 @@ namespace WoWTools.Uploader
             }
 
             showNotifications = bool.Parse(config["showNotifications"].Value);
+
+            CheckForUpdates();
+        }
+
+        private async void CheckForUpdates()
+        {
+            try
+            {
+                using (var client = new HttpClient())
+                {
+                    var currentVersion = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version.ToString();
+                    var latestVersion = await client.GetStringAsync("https://wow.tools/uploader/?versionCheck=" + currentVersion);
+                    if (latestVersion.Length < 20 && latestVersion != currentVersion)
+                    {
+                        Notify("Update available", "An update to " + latestVersion + " is available on https://wow.tools/uploader/", BalloonIcon.Info);
+                    }
+                }
+            }
+            catch(Exception e)
+            {
+                Console.WriteLine("An error occured checking for updates: " + e.Message);
+            }
         }
 
         private void UploadWorker_RunWorkerCompleted(object sender, RunWorkerCompletedEventArgs e)
