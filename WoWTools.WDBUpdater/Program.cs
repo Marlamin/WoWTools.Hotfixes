@@ -40,6 +40,8 @@ namespace WoWTools.WDBUpdater
                 wdb.recordVersion = bin.ReadUInt32();
                 wdb.formatVersion = bin.ReadUInt32();
                 
+                // All WDB structures below are based on Simca's excellent 010 template.
+
                 switch (wdb.identifier)
                 {
                     case "WMOB": // Creature
@@ -49,11 +51,13 @@ namespace WoWTools.WDBUpdater
                         wdb.entries = ReadGameObjectEntries(bin);
                         break;
                     case "WPTX": // PageText
-                        //wdb.entries = ReadPageTextEntries(bin);
-                        //break;
+                        wdb.entries = ReadPageTextEntries(bin);
+                        break;
+                    case "WQST": // Quest
+                        wdb.entries = ReadQuestEntries(bin, wdb);
+                        break;
                     case "WNPC": // NPC
                     case "WPTN": // Petition
-                    case "WQST": // Quest
                         Console.WriteLine(wdb.identifier + " parsing is not yet implemented.");
                         break;
                     default:
@@ -70,6 +74,191 @@ namespace WoWTools.WDBUpdater
                 var wdbJson = JsonSerializer.Serialize(wdb.entries, options);
                 Console.WriteLine(wdbJson);
             }
+        }
+
+        private static Dictionary<string, Dictionary<string, string>> ReadQuestEntries(BinaryReader bin, wdbCache wdb)
+        {
+            var entries = new Dictionary<string, Dictionary<string, string>>();
+
+            while (bin.BaseStream.Position < bin.BaseStream.Length)
+            {
+                var id = bin.ReadUInt32().ToString();
+                var length = bin.ReadUInt32();
+
+                if (length == 0)
+                    break;
+
+                entries.Add(id, new Dictionary<string, string>());
+                entries[id].Add("QuestID", bin.ReadUInt32().ToString());
+                entries[id].Add("QuestType", bin.ReadUInt32().ToString());
+                
+                if (wdb.recordVersion <= 12 && wdb.clientBuild < 33978)
+                {
+                    // Removed in 9.0.1.33978 - without a RecordVersion change
+                    entries[id].Add("QuestLevel", bin.ReadUInt32().ToString());
+                }
+
+                if (wdb.recordVersion >= 11)
+                {
+                    // Unknown, seems to frequently mirror SuggestedGroupNum (but is more expansive)
+                    // Theory: Maximum party size number for LFG Tool to create a group
+                    entries[id].Add("B27075_Int_1", bin.ReadUInt32().ToString());
+                }
+
+                if (wdb.recordVersion <= 12 && wdb.clientBuild < 33978)
+                {
+                    // Removed in 9.0.1.33978 - without a RecordVersion change
+                    entries[id].Add("QuestMaxScalingLevel", bin.ReadUInt32().ToString());
+                }
+
+                entries[id].Add("QuestPackageID", bin.ReadUInt32().ToString());
+
+                if (wdb.recordVersion <= 12 && wdb.clientBuild < 33978)
+                {
+                    // Removed in 9.0.1.33978 - without a RecordVersion change
+                    entries[id].Add("QuestMinLevel", bin.ReadUInt32().ToString());
+                }
+
+                entries[id].Add("QuestSortID", bin.ReadUInt32().ToString());
+                entries[id].Add("QuestInfoID", bin.ReadUInt32().ToString());
+                entries[id].Add("SuggestedGroupNum", bin.ReadUInt32().ToString());
+                entries[id].Add("RewardNextQuest", bin.ReadUInt32().ToString());
+                entries[id].Add("RewardXPDifficulty", bin.ReadUInt32().ToString());
+                entries[id].Add("RewardXPMultiplier", bin.ReadSingle().ToString());
+                entries[id].Add("RewardMoney", bin.ReadUInt32().ToString());
+                entries[id].Add("RewardMoneyDifficulty", bin.ReadUInt32().ToString());
+                entries[id].Add("RewardMoneyMultiplier", bin.ReadSingle().ToString());
+                entries[id].Add("RewardBonusMoney", bin.ReadUInt32().ToString());
+
+                for(var i = 0; i < 3; i++)
+                {
+                    entries[id].Add("RewardDisplaySpell[" + i + "]", bin.ReadUInt32().ToString());
+                }
+
+                entries[id].Add("RewardSpell", bin.ReadUInt32().ToString());
+                entries[id].Add("RewardHonorAddition", bin.ReadUInt32().ToString());
+                entries[id].Add("RewardHonorMultiplier", bin.ReadSingle().ToString());
+                entries[id].Add("RewardArtifactXPDifficulty", bin.ReadUInt32().ToString());
+                entries[id].Add("RewardArtifactXPMultiplier", bin.ReadSingle().ToString());
+                entries[id].Add("RewardArtifactCategoryID", bin.ReadUInt32().ToString());
+                entries[id].Add("ProvidedItem", bin.ReadUInt32().ToString());
+
+                for (var i = 0; i < 3; i++)
+                {
+                    entries[id].Add("Flags[" + i + "]", bin.ReadUInt32().ToString());
+                }
+
+                for (var i = 0; i < 4; i++)
+                {
+                    entries[id].Add("RewardFixedItemID[" + i + "]", bin.ReadUInt32().ToString());
+                    entries[id].Add("RewardFixedItemQuantity[" + i + "]", bin.ReadUInt32().ToString());
+                }
+
+                for (var i = 0; i < 4; i++)
+                {
+                    entries[id].Add("ItemDropItemID[" + i + "]", bin.ReadUInt32().ToString());
+                    entries[id].Add("ItemDropItemQuantity[" + i + "]", bin.ReadUInt32().ToString());
+                }
+
+                for (var i = 0; i < 6; i++)
+                {
+                    entries[id].Add("RewardChoiceItemItemID[" + i + "]", bin.ReadUInt32().ToString());
+                    entries[id].Add("RewardChoiceItemItemQuantity[" + i + "]", bin.ReadUInt32().ToString());
+                    entries[id].Add("RewardChoiceItemItemDisplayID[" + i + "]", bin.ReadUInt32().ToString());
+                }
+
+                entries[id].Add("POIContinent", bin.ReadUInt32().ToString());
+                entries[id].Add("POIx", bin.ReadSingle().ToString());
+                entries[id].Add("POIy", bin.ReadSingle().ToString());
+                entries[id].Add("POIPriority", bin.ReadUInt32().ToString());
+                entries[id].Add("RewardTitle", bin.ReadUInt32().ToString());
+                entries[id].Add("RewardArenaPoints", bin.ReadUInt32().ToString());
+                entries[id].Add("RewardSkillLineID", bin.ReadUInt32().ToString());
+                entries[id].Add("RewardNumSkillUps", bin.ReadUInt32().ToString());
+                entries[id].Add("PortraitGiverDisplayID", bin.ReadUInt32().ToString());
+                entries[id].Add("BFA_UnkDisplayID", bin.ReadUInt32().ToString());
+                entries[id].Add("PortraitTurnInDisplayID", bin.ReadUInt32().ToString());
+
+                for (var i = 0; i < 5; i++)
+                {
+                    entries[id].Add("FactionID[" + i + "]", bin.ReadUInt32().ToString());
+                    entries[id].Add("FactionValue[" + i + "]", bin.ReadUInt32().ToString());
+                    entries[id].Add("FactionOverride[" + i + "]", bin.ReadUInt32().ToString());
+                    entries[id].Add("FactionGainMaxRank[" + i + "]", bin.ReadUInt32().ToString());
+                }
+
+                entries[id].Add("RewardFactionFlags", bin.ReadUInt32().ToString());
+
+                for (var i = 0; i < 4; i++)
+                {
+                    entries[id].Add("RewardCurrencyID[" + i + "]", bin.ReadUInt32().ToString());
+                    entries[id].Add("RewardCurrencyQuantity[" + i + "]", bin.ReadUInt32().ToString());
+                }
+
+                entries[id].Add("AcceptedSoundKitID", bin.ReadUInt32().ToString());
+                entries[id].Add("CompleteSoundKitID", bin.ReadUInt32().ToString());
+                entries[id].Add("AreaGroupID", bin.ReadUInt32().ToString());
+                entries[id].Add("TimeAllowed", bin.ReadUInt32().ToString());
+
+                var numObjectives = bin.ReadUInt32();
+                entries[id].Add("NumObjectives", numObjectives.ToString());
+                entries[id].Add("RaceFlags", bin.ReadUInt64().ToString());
+                entries[id].Add("QuestRewardID", bin.ReadUInt32().ToString());
+                entries[id].Add("ExpansionID", bin.ReadUInt32().ToString());
+
+                if (wdb.recordVersion > 11)
+                {
+                    entries[id].Add("B30993_Int_1", bin.ReadUInt32().ToString());
+                    entries[id].Add("B31984_Int_1", bin.ReadUInt32().ToString());
+                }
+
+                var ds = new DataStore(bin);
+
+                var LogTitleLength = ds.GetIntByBits(9);
+                var LogDescriptionLength = ds.GetIntByBits(12);
+                var QuestDescriptionLength = ds.GetIntByBits(12);
+                var AreaDescriptionLength = ds.GetIntByBits(9);
+                var PortraitGiverTextLength = ds.GetIntByBits(10);
+                var PortraitGiverNameLength = ds.GetIntByBits(8);
+                var PortraitTurnInTextLength = ds.GetIntByBits(10);
+                var PortraitTurnInNameLength = ds.GetIntByBits(8);
+                var QuestCompletionLogLength = ds.GetIntByBits(11);
+
+                for (var i = 0; i < numObjectives; i++)
+                {
+                    entries[id].Add("ObjectiveID[" + i + "]", bin.ReadUInt32().ToString());
+                    entries[id].Add("ObjectiveType[" + i + "]", bin.ReadByte().ToString());
+                    entries[id].Add("ObjectiveStorageIndex[" + i + "]", bin.ReadByte().ToString());
+                    entries[id].Add("ObjectiveObjectID[" + i + "]", bin.ReadUInt32().ToString());
+                    entries[id].Add("ObjectiveAmount[" + i + "]", bin.ReadUInt32().ToString());
+                    entries[id].Add("ObjectiveFlags[" + i + "]", bin.ReadUInt32().ToString());
+                    entries[id].Add("ObjectiveFlags2[" + i + "]", bin.ReadUInt32().ToString());
+                    entries[id].Add("ObjectivePercentAmount[" + i + "]", bin.ReadSingle().ToString());
+
+                    var numVisualEffects = bin.ReadUInt32();
+                    entries[id].Add("ObjectiveNumVisualEffects[" + i + "]", numVisualEffects.ToString());
+
+                    for(var j = 0; j < numVisualEffects; j++)
+                    {
+                        entries[id].Add("ObjectiveVisualEffects[" + i + "][" + j + "]", bin.ReadUInt32().ToString());
+                    }
+
+                    var descriptionLength = bin.ReadByte();
+                    entries[id].Add("ObjectiveDescription[" + i + "]", ds.GetString(descriptionLength).Trim('\0'));
+                }
+
+                entries[id].Add("LogTitle", ds.GetString(LogTitleLength).Trim('\0'));
+                entries[id].Add("LogDescription", ds.GetString(LogDescriptionLength).Trim('\0'));
+                entries[id].Add("QuestDescription", ds.GetString(QuestDescriptionLength).Trim('\0'));
+                entries[id].Add("AreaDescription", ds.GetString(AreaDescriptionLength).Trim('\0'));
+                entries[id].Add("PortraitGiverText", ds.GetString(PortraitGiverTextLength).Trim('\0'));
+                entries[id].Add("PortraitGiverName", ds.GetString(PortraitGiverNameLength).Trim('\0'));
+                entries[id].Add("PortraitTurnInText", ds.GetString(PortraitTurnInTextLength).Trim('\0'));
+                entries[id].Add("PortraitTurnInName", ds.GetString(PortraitTurnInNameLength).Trim('\0'));
+                entries[id].Add("QuestCompletionLog", ds.GetString(QuestCompletionLogLength).Trim('\0'));
+            }
+
+            return entries;
         }
 
         private static Dictionary<string, Dictionary<string, string>> ReadCreatureEntries(BinaryReader bin)
@@ -190,19 +379,6 @@ namespace WoWTools.WDBUpdater
 
             return entries;
         }
-
-        //public static void LoadCreatureCache(BinaryReader bin)
-        //{
-        //    while(bin.BaseStream.Position < bin.BaseStream.Length)
-        //    {
-        //        var ID = bin.ReadUInt32();
-        //        var recordLength = bin.ReadInt32();
-        //        var recordBytes = bin.ReadBytes(recordLength);
-        //        var bitArray = new BitArray(recordBytes);
-        //        uint titleLength = bitArray.
-        //        Console.WriteLine(titleLength);
-        //    }
-        //}
 
         public static Dictionary<string, Dictionary<string, string>> ReadGameObjectEntries(BinaryReader bin)
         {
