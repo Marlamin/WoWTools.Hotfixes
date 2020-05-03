@@ -180,7 +180,12 @@ namespace WoWTools.WDBUpdater
                 entries[id].Add("unkInt", bin.ReadUInt32().ToString());
                 entries[id].Add("unkByte", bin.ReadByte().ToString());
 
-                throw new Exception("Bit reading needs to start here");
+                var ds = new DataStore(bin);
+
+                var TextLength = ds.GetIntByBits(12);
+                entries[id].Add("TextLength", TextLength.ToString());
+
+                entries[id].Add("Text", ds.GetString(TextLength).Trim('\0'));
             }
 
             return entries;
