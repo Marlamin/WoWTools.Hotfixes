@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MySql.Data.MySqlClient;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -25,7 +26,16 @@ namespace WoWTools.WDBUpdater
         {
             if (args.Length == 0)
             {
-                throw new Exception("Require WDB file as argument");
+                throw new Exception("Arguments: <wdbpath> (json (default)/mysql)");
+            }
+
+            var outputType = "json";
+            if(args.Length == 2)
+            {
+                if(args[1].ToLower() == "mysql")
+                {
+                    outputType = "mysql";
+                }
             }
 
             var wdb = new wdbCache();
@@ -65,14 +75,66 @@ namespace WoWTools.WDBUpdater
                         break;
                 }
 
-                var options = new JsonSerializerOptions
+                var humanReadableJsonOptions = new JsonSerializerOptions
                 {
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                     WriteIndented = true
                 };
 
-                var wdbJson = JsonSerializer.Serialize(wdb.entries, options);
-                Console.WriteLine(wdbJson);
+                var storageJsonOptions = new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    WriteIndented = false
+                };
+
+                if (outputType == "json")
+                {
+                    var wdbJson = JsonSerializer.Serialize(wdb.entries, humanReadableJsonOptions);
+                    Console.WriteLine(wdbJson);
+                }
+                else if(outputType == "mysql")
+                {
+                    if (!File.Exists("connectionstring.txt"))
+                    {
+                        throw new FileNotFoundException("connectionstring.txt not found! Need this for MySQL output.");
+                    }
+
+                    using (var connection = new MySqlConnection(File.ReadAllText("connectionstring.txt")))
+                    {
+                        connection.Open();
+
+                        string targetTable;
+                        string nameCol;
+                        switch (wdb.identifier)
+                        {
+                            case "WMOB":
+                                targetTable = "creatures";
+                                nameCol = "Name[0]";
+                                break;
+                            default:
+                                throw new Exception("WDB identifier " + wdb.identifier + " has no fitting MySQL table to output to.");
+                        }
+
+                        using (var cmd = new MySqlCommand())
+                        {
+                            cmd.Connection = connection;
+
+                            cmd.CommandText = "INSERT INTO wowdata." + targetTable + " (id, name, json) VALUES (@id, @name, @json)";
+                            cmd.Parameters.AddWithValue("id", 0);
+                            cmd.Parameters.AddWithValue("name", "");
+                            cmd.Parameters.AddWithValue("json", "");
+
+                            foreach (var entry in wdb.entries)
+                            {
+                                cmd.Parameters["id"].Value = entry.Key;
+                                cmd.Parameters["name"].Value = entry.Value[nameCol];
+                                cmd.Parameters["json"].Value = JsonSerializer.Serialize(entry.Value, storageJsonOptions);
+                                cmd.ExecuteNonQuery();
+                            }
+                        }
+                    }
+                }
+
             }
         }
 
