@@ -4,6 +4,7 @@ using System;
 using System.ComponentModel;
 using System.Configuration;
 using System.IO;
+using System.IO.Compression;
 using System.Net.Http;
 using System.Windows;
 using System.Windows.Input;
@@ -165,7 +166,28 @@ namespace WoWTools.Uploader
 
                 bin.BaseStream.Position = 0;
 
-                cacheStream.CopyTo(memStream);
+                using (var archive = new ZipArchive(memStream, ZipArchiveMode.Create))
+                {
+                    var entry = archive.CreateEntry("DBCache.bin");
+                    using (var entryStream = entry.Open())
+                    {
+                        cacheStream.CopyTo(entryStream);
+                    }
+
+                    var wdbPath = Path.Combine(Path.GetDirectoryName(path), @"..\..\WDB\enUS");
+                    if (Directory.Exists(wdbPath))
+                    {
+                        foreach (var wdbFile in Directory.GetFiles(wdbPath, "*.wdb"))
+                        {
+                            var wdbEntry = archive.CreateEntry(Path.GetFileName(wdbFile));
+                            using (var wdbEntryStream = wdbEntry.Open())
+                            using (var wdbFileStream = new MemoryStream(File.ReadAllBytes(wdbFile)))
+                            {
+                                wdbFileStream.CopyTo(wdbEntryStream);
+                            }
+                        }
+                    }
+                }
 
                 webClient.DefaultRequestHeaders.Add("WT-BuildInfo", Convert.ToBase64String(File.ReadAllBytes(Path.Combine(ConfigurationManager.AppSettings["installDir"], ".build.info"))));
                 webClient.DefaultRequestHeaders.Add("WT-UserToken", ConfigurationManager.AppSettings["APIToken"]);
@@ -173,8 +195,8 @@ namespace WoWTools.Uploader
                 var fileBytes = memStream.ToArray();
 
                 MultipartFormDataContent form = new MultipartFormDataContent();
-                form.Add(new ByteArrayContent(fileBytes, 0, fileBytes.Length), "files", "DBCache.bin");
-                var result = webClient.PostAsync("https://wow.tools/dbc/api/cache/upload", form).Result;
+                form.Add(new ByteArrayContent(fileBytes, 0, fileBytes.Length), "files", "Cache.zip");
+                var result = webClient.PostAsync("https://wow.tools/dbc/api/cache/uploadzip", form).Result;
                 Console.WriteLine("Return status: " + result.StatusCode);
                 return result;
             }
