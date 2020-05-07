@@ -68,7 +68,6 @@ namespace WoWTools.WDBUpdater
                         break;
                     case "WNPC": // NPC
                     case "WPTN": // Petition
-                        Console.WriteLine(wdb.identifier + " parsing is not yet implemented.");
                         break;
                     default:
                         Console.WriteLine("Unknown cache file: " + wdb.identifier);
@@ -116,7 +115,7 @@ namespace WoWTools.WDBUpdater
                                 nameCol = "LogTitle";
                                 break;
                             default:
-                                throw new Exception("WDB identifier " + wdb.identifier + " has no fitting MySQL table to output to.");
+                                return;
                         }
 
                         var currentEntries = new Dictionary<uint, DBEntry>();
@@ -138,8 +137,8 @@ namespace WoWTools.WDBUpdater
                             }
                         }
 
-                        Console.WriteLine(currentEntries.Count + " entries in DB");
-                        Console.WriteLine(wdb.entries.Count + " entries in file");
+                        Console.WriteLine(currentEntries.Count + " entries in " + targetTable + " DB");
+                        Console.WriteLine(wdb.entries.Count + " entries in WDB file");
 
                         var newEntries = 0;
                         var updatedEntries = 0;
