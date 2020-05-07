@@ -111,31 +111,101 @@ namespace WoWTools.WDBUpdater
                                 targetTable = "creatures";
                                 nameCol = "Name[0]";
                                 break;
+                            case "WQST":
+                                targetTable = "quests";
+                                nameCol = "LogTitle";
+                                break;
                             default:
                                 throw new Exception("WDB identifier " + wdb.identifier + " has no fitting MySQL table to output to.");
                         }
 
-                        using (var cmd = new MySqlCommand())
+                        var currentEntries = new Dictionary<uint, DBEntry>();
+                        using (var currentDataCmd = new MySqlCommand("SELECT id, name, firstseenbuild, lastupdatedbuild, json FROM " + targetTable, connection))
+                        using (var reader = currentDataCmd.ExecuteReader())
                         {
-                            cmd.Connection = connection;
+                            while (reader.Read())
+                            {
+                                var entry = new DBEntry()
+                                {
+                                    id = reader.GetUInt32(0),
+                                    name = reader.GetString(1),
+                                    firstSeenBuild = reader.GetUInt32(2),
+                                    lastUpdatedBuild = reader.GetUInt32(3),
+                                    json = reader.GetString(4)
+                                };
 
-                            cmd.CommandText = "INSERT INTO wowdata." + targetTable + " (id, name, json) VALUES (@id, @name, @json)";
-                            cmd.Parameters.AddWithValue("id", 0);
-                            cmd.Parameters.AddWithValue("name", "");
-                            cmd.Parameters.AddWithValue("json", "");
+                                currentEntries.Add(entry.id, entry);
+                            }
+                        }
+
+                        Console.WriteLine(currentEntries.Count + " entries in DB");
+                        Console.WriteLine(wdb.entries.Count + " entries in file");
+
+                        var newEntries = 0;
+                        var updatedEntries = 0;
+
+                        using (var updateCmd = new MySqlCommand())
+                        using (var insertCmd = new MySqlCommand())
+                        {
+                            insertCmd.Connection = connection;
+                            insertCmd.CommandText = "INSERT INTO wowdata." + targetTable + " (id, name, firstseenbuild, lastupdatedbuild, json) VALUES (@id, @name, @firstseenbuild, @lastupdatedbuild, @json)";
+                            insertCmd.Parameters.AddWithValue("id", 0);
+                            insertCmd.Parameters.AddWithValue("name", "");
+                            insertCmd.Parameters.AddWithValue("firstseenbuild", wdb.clientBuild);
+                            insertCmd.Parameters.AddWithValue("lastupdatedbuild", wdb.clientBuild);
+                            insertCmd.Parameters.AddWithValue("json", "");
+
+                            updateCmd.Connection = connection;
+                            updateCmd.CommandText = "UPDATE wowdata." + targetTable + " SET name = @name, lastupdatedbuild = @lastupdatedbuild, json = @json WHERE ID = @id";
+                            updateCmd.Parameters.AddWithValue("id", 0);
+                            updateCmd.Parameters.AddWithValue("name", "");
+                            updateCmd.Parameters.AddWithValue("lastupdatedbuild", wdb.clientBuild);
+                            updateCmd.Parameters.AddWithValue("json", "");
 
                             foreach (var entry in wdb.entries)
                             {
-                                cmd.Parameters["id"].Value = entry.Key;
-                                cmd.Parameters["name"].Value = entry.Value[nameCol];
-                                cmd.Parameters["json"].Value = JsonSerializer.Serialize(entry.Value, storageJsonOptions);
-                                cmd.ExecuteNonQuery();
+                                var properID = uint.Parse(entry.Key);
+                                var serializedJson = JsonSerializer.Serialize(entry.Value, storageJsonOptions);
+
+                                if (!currentEntries.TryGetValue(properID, out DBEntry dbEntry))
+                                {
+                                    Console.WriteLine(entry.Key + " is new, adding!");
+                                    insertCmd.Parameters["id"].Value = entry.Key;
+                                    insertCmd.Parameters["name"].Value = entry.Value[nameCol];
+                                    insertCmd.Parameters["json"].Value = serializedJson;
+                                    insertCmd.ExecuteNonQuery();
+                                    newEntries++;
+                                }
+                                else
+                                {
+                                    if (dbEntry.json != serializedJson)
+                                    {
+                                        Console.WriteLine("JSON for " + entry.Key + " is changed updating! Before: \n " + dbEntry.json + "\n After: \n" + serializedJson);
+                                        updateCmd.Parameters["id"].Value = entry.Key;
+                                        updateCmd.Parameters["name"].Value = entry.Value[nameCol];
+                                        updateCmd.Parameters["json"].Value = serializedJson;
+                                        updateCmd.ExecuteNonQuery();
+                                        updatedEntries++;
+                                    }
+                                }
                             }
                         }
+
+                        Console.WriteLine("New entries: " + newEntries);
+                        Console.WriteLine("Updated entries: " + updatedEntries);
                     }
                 }
 
             }
+        }
+
+        private struct DBEntry
+        {
+            public uint id;
+            public string name;
+            public uint firstSeenBuild;
+            public uint lastUpdatedBuild;
+            public string json;
         }
 
         private static Dictionary<string, Dictionary<string, string>> ReadQuestEntries(BinaryReader bin, wdbCache wdb)
