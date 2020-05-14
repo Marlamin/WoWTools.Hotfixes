@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace WoWTools.WDBUpdater
 {
@@ -19,7 +20,17 @@ namespace WoWTools.WDBUpdater
             public uint recordSize;
             public uint recordVersion;
             public uint formatVersion;
+            public DBBuild buildInfo;
             public Dictionary<string, Dictionary<string, string>> entries;
+        }
+
+        public struct DBBuild
+        {
+            public string version;
+            public short expansion;
+            public short major;
+            public short minor;
+            public int build;
         }
 
         static void Main(string[] args)
@@ -49,13 +60,14 @@ namespace WoWTools.WDBUpdater
                 wdb.recordSize = bin.ReadUInt32();
                 wdb.recordVersion = bin.ReadUInt32();
                 wdb.formatVersion = bin.ReadUInt32();
-                
+                wdb.buildInfo = GetBuildInfoFromDB(wdb.clientBuild);
+
                 // All WDB structures below are based on Simca's excellent 010 template.
 
                 switch (wdb.identifier)
                 {
                     case "WMOB": // Creature
-                        wdb.entries = ReadCreatureEntries(bin);
+                        wdb.entries = ReadCreatureEntries(bin, wdb);
                         break;
                     case "WGOB": // Gameobject
                         wdb.entries = ReadGameObjectEntries(bin);
@@ -93,11 +105,6 @@ namespace WoWTools.WDBUpdater
                 }
                 else if(outputType == "mysql")
                 {
-                    if (!File.Exists("connectionstring.txt"))
-                    {
-                        throw new FileNotFoundException("connectionstring.txt not found! Need this for MySQL output.");
-                    }
-
                     using (var connection = new MySqlConnection(File.ReadAllText("connectionstring.txt")))
                     {
                         connection.Open();
@@ -207,6 +214,43 @@ namespace WoWTools.WDBUpdater
             public string json;
         }
 
+        private static DBBuild GetBuildInfoFromDB(uint build)
+        {
+            if (!File.Exists("connectionstring.txt"))
+            {
+                throw new FileNotFoundException("connectionstring.txt not found! Need this for build lookup.");
+            }
+
+            var dbBuild = new DBBuild();
+            
+            using (var connection = new MySqlConnection(File.ReadAllText("connectionstring.txt")))
+            {
+                connection.Open();
+                using (var buildCmd = new MySqlCommand("SELECT version, expansion, major, minor, build FROM casc.wow_builds WHERE build = @build", connection))
+                {
+                    buildCmd.Parameters.AddWithValue("build", build);
+                    using (var reader = buildCmd.ExecuteReader())
+                    {
+                        if (!reader.HasRows)
+                        {
+                            throw new Exception("Build not found in DB!");
+                        }
+
+                        while (reader.Read())
+                        {
+                            dbBuild.version = reader.GetString(0);
+                            dbBuild.expansion = reader.GetInt16(1);
+                            dbBuild.major = reader.GetInt16(2);
+                            dbBuild.minor = reader.GetInt16(3);
+                            dbBuild.build = reader.GetInt32(4);
+                        }
+                    }
+                }
+            }
+
+            return dbBuild;
+        }
+
         private static Dictionary<string, Dictionary<string, string>> ReadQuestEntries(BinaryReader bin, wdbCache wdb)
         {
             var entries = new Dictionary<string, Dictionary<string, string>>();
@@ -223,7 +267,7 @@ namespace WoWTools.WDBUpdater
                 entries[id].Add("QuestID", bin.ReadUInt32().ToString());
                 entries[id].Add("QuestType", bin.ReadUInt32().ToString());
                 
-                if (wdb.recordVersion <= 12 && wdb.clientBuild < 33978)
+                if (wdb.recordVersion <= 12 && wdb.buildInfo.expansion < 9)
                 {
                     // Removed in 9.0.1.33978 - without a RecordVersion change
                     entries[id].Add("QuestLevel", bin.ReadUInt32().ToString());
@@ -236,7 +280,7 @@ namespace WoWTools.WDBUpdater
                     entries[id].Add("B27075_Int_1", bin.ReadUInt32().ToString());
                 }
 
-                if (wdb.recordVersion <= 12 && wdb.clientBuild < 33978)
+                if (wdb.recordVersion <= 12 && wdb.buildInfo.expansion < 9)
                 {
                     // Removed in 9.0.1.33978 - without a RecordVersion change
                     entries[id].Add("QuestMaxScalingLevel", bin.ReadUInt32().ToString());
@@ -244,7 +288,7 @@ namespace WoWTools.WDBUpdater
 
                 entries[id].Add("QuestPackageID", bin.ReadUInt32().ToString());
 
-                if (wdb.recordVersion <= 12 && wdb.clientBuild < 33978)
+                if (wdb.recordVersion <= 12 && wdb.buildInfo.expansion < 9)
                 {
                     // Removed in 9.0.1.33978 - without a RecordVersion change
                     entries[id].Add("QuestMinLevel", bin.ReadUInt32().ToString());
@@ -339,7 +383,7 @@ namespace WoWTools.WDBUpdater
 
                 if (wdb.recordVersion > 11)
                 {
-                    entries[id].Add("B30993_Int_1", bin.ReadUInt32().ToString());
+                    entries[id].Add("ManagedWorldStateID", bin.ReadUInt32().ToString());
                     entries[id].Add("B31984_Int_1", bin.ReadUInt32().ToString());
                 }
 
@@ -392,7 +436,7 @@ namespace WoWTools.WDBUpdater
             return entries;
         }
 
-        private static Dictionary<string, Dictionary<string, string>> ReadCreatureEntries(BinaryReader bin)
+        private static Dictionary<string, Dictionary<string, string>> ReadCreatureEntries(BinaryReader bin, wdbCache wdb)
         {
             var entries = new Dictionary<string, Dictionary<string, string>>();
 
@@ -441,7 +485,6 @@ namespace WoWTools.WDBUpdater
 
                 var numCreatureDisplays = bin.ReadUInt32();
                 entries[id].Add("NumCreatureDisplays", numCreatureDisplays.ToString());
-
                 entries[id].Add("UnkBFAMultiplier", bin.ReadSingle().ToString());
 
                 for(var i = 0; i < numCreatureDisplays; i++)
@@ -461,9 +504,13 @@ namespace WoWTools.WDBUpdater
                 entries[id].Add("RequiredExpansion", bin.ReadUInt32().ToString());
                 entries[id].Add("TrackingQuestID", bin.ReadUInt32().ToString());
                 entries[id].Add("VignetteID", bin.ReadUInt32().ToString());
-                entries[id].Add("B28202_Int_1", bin.ReadUInt32().ToString());
+                entries[id].Add("BFA_Int_1", bin.ReadUInt32().ToString());
                 entries[id].Add("B28938_Int_1", bin.ReadUInt32().ToString());
-                entries[id].Add("B28938_Int_2", bin.ReadUInt32().ToString());
+
+                if(wdb.buildInfo.expansion >= 9)
+                {
+                    entries[id].Add("Shadowlands_Int_1", bin.ReadUInt32().ToString());
+                }
 
                 entries[id].Add("Title", ds.GetString(TitleLength).Trim('\0'));
                 entries[id].Add("TitleAlt", ds.GetString(TitleAltLength).Trim('\0'));
