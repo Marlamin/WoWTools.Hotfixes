@@ -96,13 +96,24 @@ namespace WoWTools.HotfixDumper
                     if (hotfix.header.pushID == -1)
                         continue;
                 }
-                
+
+                var hotfixDataMD5 = "";
+                if(hotfix.data.Length > 0)
+                {
+                    using (var md5 = System.Security.Cryptography.MD5.Create())
+                    {
+                        md5.TransformFinalBlock(hotfix.data, 0, hotfix.data.Length);
+                        hotfixDataMD5 = BitConverter.ToString(md5.Hash).Replace("-", string.Empty).ToLower();
+                    }
+                }
+
                 filteredList.Add(new HotfixEntry
                 {
                     pushID = hotfix.header.pushID,
                     recordID = hotfix.header.recordID,
                     isValid = hotfix.header.isValid,
-                    tableName = hotfix.tableName
+                    tableName = hotfix.tableName,
+                    dataMD5 = hotfixDataMD5
                 });
 
                 if (dumpKeys)
@@ -226,6 +237,7 @@ namespace WoWTools.HotfixDumper
             public uint recordID;
             public byte isValid;
             public string tableName;
+            public string dataMD5;
         }
 
         private struct DBCacheEntryHeader
