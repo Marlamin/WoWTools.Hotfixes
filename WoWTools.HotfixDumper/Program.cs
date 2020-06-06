@@ -91,12 +91,6 @@ namespace WoWTools.HotfixDumper
             var filteredList = new List<HotfixEntry>();
             foreach(var hotfix in hotfixes)
             {
-                if (!dumpKeys)
-                {
-                    if (hotfix.header.pushID == -1)
-                        continue;
-                }
-
                 var hotfixDataMD5 = "";
                 if(hotfix.data.Length > 0)
                 {
