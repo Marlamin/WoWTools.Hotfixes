@@ -293,7 +293,7 @@ namespace WoWTools.Uploader
             {
                 cacheFolder = Path.Combine(givenPath, "_retail_", "Cache", "ADB", "enUS");
 
-                if ((Directory.Exists(cacheFolder) || Directory.Exists(cacheFolder.Replace("_retail_", "_beta"))) && File.Exists(Path.Combine(givenPath, ".build.info")))
+                if ((Directory.Exists(cacheFolder) || Directory.Exists(cacheFolder.Replace("_retail_", "_beta_"))) && File.Exists(Path.Combine(givenPath, ".build.info")))
                 {
                     validDir = true;
                 }
