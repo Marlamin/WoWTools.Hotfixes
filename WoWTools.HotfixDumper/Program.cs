@@ -112,7 +112,7 @@ namespace WoWTools.HotfixDumper
 
                 if (dumpKeys)
                 {
-                    if (!dbdCache.ContainsKey(hotfix.tableName))
+                    if (!dbdCache.ContainsKey(hotfix.tableName) && File.Exists(Path.Combine(definitionDir, hotfix.tableName + ".dbd")))
                     {
                         var reader = new DBDReader();
                         var dbd = reader.Read(Path.Combine(definitionDir, hotfix.tableName + ".dbd"));
@@ -135,7 +135,6 @@ namespace WoWTools.HotfixDumper
                                     {
                                         if (dataBin.BaseStream.Position == dataBin.BaseStream.Length)
                                         {
-                                            //Console.WriteLine("Reached end of data stream!");
                                             continue;
                                         }
 
@@ -143,6 +142,11 @@ namespace WoWTools.HotfixDumper
                                         {
                                             for (var i = 0; i < field.arrLength; i++)
                                             {
+                                                if (dataBin.BaseStream.Position == dataBin.BaseStream.Length)
+                                                {
+                                                    continue;
+                                                }
+
                                                 if (field.size == 0)
                                                 {
                                                     if (dbd.columnDefinitions[field.name].type == "float")
