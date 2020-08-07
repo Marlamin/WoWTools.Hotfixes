@@ -216,13 +216,25 @@ namespace WoWTools.WDBUpdater
 
         private static DBBuild GetBuildInfoFromDB(uint build)
         {
-            if (!File.Exists("connectionstring.txt"))
-            {
-                throw new FileNotFoundException("connectionstring.txt not found! Need this for build lookup.");
-            }
+
 
             var dbBuild = new DBBuild();
-            
+
+            if (!File.Exists("connectionstring.txt"))
+            {
+#if DEBUG
+                Console.WriteLine("connectionstring.txt not found! Need this for build lookup, using hardcoded build.");
+                dbBuild.version = "9.0.1.35078";
+                dbBuild.expansion = 9;
+                dbBuild.major = 0;
+                dbBuild.minor = 1;
+                dbBuild.build = 35078;
+                return dbBuild;
+#else
+                throw new Exception("connectionstring.txt not found! Need this for build lookup.");
+#endif
+            }
+
             using (var connection = new MySqlConnection(File.ReadAllText("connectionstring.txt")))
             {
                 connection.Open();
@@ -305,9 +317,18 @@ namespace WoWTools.WDBUpdater
                 entries[id].Add("RewardMoneyMultiplier", bin.ReadSingle().ToString());
                 entries[id].Add("RewardBonusMoney", bin.ReadUInt32().ToString());
 
-                for(var i = 0; i < 3; i++)
+                uint rewardDisplaySpellCount = 0;
+                if(wdb.clientBuild >= 35078 && wdb.buildInfo.expansion >= 9)
                 {
-                    entries[id].Add("RewardDisplaySpell[" + i + "]", bin.ReadUInt32().ToString());
+                    rewardDisplaySpellCount = bin.ReadUInt32();
+                    entries[id].Add("RewardDisplaySpellCount", rewardDisplaySpellCount.ToString());
+                }
+                else
+                {
+                    for (var i = 0; i < 3; i++)
+                    {
+                        entries[id].Add("RewardDisplaySpell[" + i + "]", bin.ReadUInt32().ToString());
+                    }
                 }
 
                 entries[id].Add("RewardSpell", bin.ReadUInt32().ToString());
@@ -387,6 +408,15 @@ namespace WoWTools.WDBUpdater
                     entries[id].Add("B31984_Int_1", bin.ReadUInt32().ToString());
                 }
 
+                if (wdb.clientBuild >= 35078 && wdb.buildInfo.expansion >= 9)
+                {
+                    for (var i = 0; i < rewardDisplaySpellCount; i++)
+                    {
+                        entries[id].Add("RewardDisplaySpellID[" + i + "]", bin.ReadUInt32().ToString());
+                        entries[id].Add("RewardDisplayPlayerConditionID[" + i + "]", bin.ReadUInt32().ToString());
+                    }
+                }
+
                 var ds = new DataStore(bin);
 
                 var LogTitleLength = ds.GetIntByBits(9);
@@ -455,7 +485,7 @@ namespace WoWTools.WDBUpdater
                 var TitleLength = ds.GetIntByBits(11);
                 var TitleAltLength = ds.GetIntByBits(11);
                 var CursorNameLength = ds.GetIntByBits(6);
-                var Leader = ds.GetIntByBits(1);
+                var Leader = ds.GetBool();
                 var Name0Length = ds.GetIntByBits(11);
                 var NameAlt0Length = ds.GetIntByBits(11);
                 var Name1Length = ds.GetIntByBits(11);
@@ -504,12 +534,18 @@ namespace WoWTools.WDBUpdater
                 entries[id].Add("RequiredExpansion", bin.ReadUInt32().ToString());
                 entries[id].Add("TrackingQuestID", bin.ReadUInt32().ToString());
                 entries[id].Add("VignetteID", bin.ReadUInt32().ToString());
-                entries[id].Add("BFA_Int_1", bin.ReadUInt32().ToString());
-                entries[id].Add("B28938_Int_1", bin.ReadUInt32().ToString());
+                entries[id].Add("CreatureClassMask", bin.ReadUInt32().ToString());
+                entries[id].Add("UIWidgetParentSetID", bin.ReadUInt32().ToString());
 
-                if(wdb.buildInfo.expansion >= 9)
+                if (wdb.buildInfo.expansion >= 9)
                 {
-                    entries[id].Add("Shadowlands_Int_1", bin.ReadUInt32().ToString());
+                    entries[id].Add("UnkConditionID", bin.ReadUInt32().ToString());
+                }
+
+                if (wdb.buildInfo.expansion == 8 && wdb.clientBuild >= 34769)
+                {
+                    entries[id].Add("BfA_Int_1", bin.ReadUInt32().ToString());
+                    entries[id].Add("BfA_Int_2", bin.ReadUInt32().ToString());
                 }
 
                 entries[id].Add("Title", ds.GetString(TitleLength).Trim('\0'));
