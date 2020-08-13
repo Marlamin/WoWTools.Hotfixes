@@ -134,10 +134,11 @@ namespace WoWTools.HotfixDumper
                                     foreach (var field in versionDef.definitions)
                                     {
                                         if (dataBin.BaseStream.Position == dataBin.BaseStream.Length)
-                                        {
                                             continue;
-                                        }
 
+                                        if (field.isNonInline && field.isID)
+                                            continue;
+                                   
                                         if (field.arrLength > 0)
                                         {
                                             for (var i = 0; i < field.arrLength; i++)
@@ -195,13 +196,25 @@ namespace WoWTools.HotfixDumper
                                     if (dataBin.BaseStream.Length != dataBin.BaseStream.Position)
                                     {
                                         var tableHash = dataBin.ReadUInt32();
-                                        //Console.WriteLine("Encountered an extra " + tableHashes[tableHash] + " record of " + (dataBin.BaseStream.Length - dataBin.BaseStream.Position) + " bytes in " + hotfix.tableName + " ID " + hotfix.header.recordID);
-                                        if (tableHashes[tableHash] == "TactKey")
+                                        if (tableHash == 0)
+                                            continue;
+
+                                        if (!tableHashes.ContainsKey(tableHash))
                                         {
-                                            var lookup = dataBin.ReadUInt64();
-                                            var keyBytes = dataBin.ReadBytes(16);
-                                            Console.WriteLine(lookup.ToString("X8").PadLeft(16, '0') + " " + BitConverter.ToString(keyBytes).Replace("-", ""));
+                                            Console.WriteLine("Encountered an extra " + tableHash.ToString("X8") + " (unk table) record of " + (dataBin.BaseStream.Length - dataBin.BaseStream.Position) + " bytes in " + hotfix.tableName + " ID " + hotfix.header.recordID);
                                         }
+                                        else
+                                        {
+                                            Console.WriteLine("Encountered an extra " + tableHashes[tableHash] + " record of " + (dataBin.BaseStream.Length - dataBin.BaseStream.Position) + " bytes in " + hotfix.tableName + " ID " + hotfix.header.recordID);
+
+                                            if (tableHashes[tableHash] == "TactKey")
+                                            {
+                                                var lookup = dataBin.ReadUInt64();
+                                                var keyBytes = dataBin.ReadBytes(16);
+                                                Console.WriteLine(lookup.ToString("X8").PadLeft(16, '0') + " " + BitConverter.ToString(keyBytes).Replace("-", ""));
+                                            }
+                                        }
+                                        
                                     }
                                 }
                             }
