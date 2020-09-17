@@ -285,13 +285,6 @@ namespace WoWTools.WDBUpdater
                     entries[id].Add("QuestLevel", bin.ReadUInt32().ToString());
                 }
 
-                if (wdb.recordVersion >= 11)
-                {
-                    // Unknown, seems to frequently mirror SuggestedGroupNum (but is more expansive)
-                    // Theory: Maximum party size number for LFG Tool to create a group
-                    entries[id].Add("B27075_Int_1", bin.ReadUInt32().ToString());
-                }
-
                 if (wdb.recordVersion <= 12 && wdb.buildInfo.expansion < 9)
                 {
                     // Removed in 9.0.1.33978 - without a RecordVersion change
@@ -300,13 +293,28 @@ namespace WoWTools.WDBUpdater
 
                 entries[id].Add("QuestPackageID", bin.ReadUInt32().ToString());
 
+                if (wdb.recordVersion >= 11)
+                {
+                    entries[id].Add("ContentTuningID", bin.ReadUInt32().ToString());
+                }
+
                 if (wdb.recordVersion <= 12 && wdb.buildInfo.expansion < 9)
                 {
                     // Removed in 9.0.1.33978 - without a RecordVersion change
                     entries[id].Add("QuestMinLevel", bin.ReadUInt32().ToString());
                 }
 
-                entries[id].Add("QuestSortID", bin.ReadUInt32().ToString());
+                // If negative, index into QuestSortID, if positive index into AreaTable
+                var questSortOrAreaTableID = bin.ReadInt32();
+                if (questSortOrAreaTableID < 0)
+                {
+                    entries[id].Add("QuestSortID", Math.Abs(questSortOrAreaTableID).ToString());
+                }
+                else
+                {
+                    entries[id].Add("AreaTableID", questSortOrAreaTableID.ToString());
+                }
+
                 entries[id].Add("QuestInfoID", bin.ReadUInt32().ToString());
                 entries[id].Add("SuggestedGroupNum", bin.ReadUInt32().ToString());
                 entries[id].Add("RewardNextQuest", bin.ReadUInt32().ToString());
