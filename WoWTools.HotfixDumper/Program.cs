@@ -122,7 +122,22 @@ namespace WoWTools.HotfixDumper
                     if (dbdCache.ContainsKey(hotfix.tableName) && hotfix.header.isValid == 1)
                     {
                         var dbd = dbdCache[hotfix.tableName];
-                        if (DBDefsLib.Utils.GetVersionDefinitionByBuild(dbd, new Build("9.0.1." + build), out var versionToUse))
+                        VersionDefinitions? versionToUse = null;
+                        var buildFound = false;
+
+                        foreach (var definition in dbd.versionDefinitions)
+                        {
+                            foreach (var versionBuild in definition.builds)
+                            {
+                                if (versionBuild.build == build)
+                                {
+                                    versionToUse = definition;
+                                    buildFound = true;
+                                }
+                            }
+                        }
+
+                        if (buildFound)
                         {
                             long dataLength = 0;
                             var versionDef = (VersionDefinitions)versionToUse;
