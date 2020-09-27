@@ -50,6 +50,7 @@ namespace WoWTools.Uploader
             uploadWorker.DoWork += UploadWorker_DoWork;
             uploadWorker.RunWorkerCompleted += UploadWorker_RunWorkerCompleted;
 
+
             var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None).AppSettings.Settings;
             cacheFolder = Path.Combine(config["installDir"].Value, "_retail_", "Cache", "ADB", "enUS");
             if (Directory.Exists(cacheFolder))
@@ -346,7 +347,7 @@ namespace WoWTools.Uploader
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("Unable to get WoW install path from registry. Falling back to online mode! Error: " + ex.Message);
+                    Console.WriteLine("Unable to get WoW install path from registry. Error: " + ex.Message);
                 }
             }
             else
@@ -371,9 +372,14 @@ namespace WoWTools.Uploader
 
             NotificationBox.IsChecked = showNotifications;
 
-            RegistryKey rk = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
+            var rk = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
 
-            if (rk.GetValue("WoW.tools Uploader") != null)
+            var rkResult = (string) rk.GetValue("WoW.tools Uploader", "Not found");
+            if (rkResult == "Not found")
+            {
+                StartupBox.IsChecked = false;
+            }
+            else
             {
                 StartupBox.IsChecked = true;
             }
@@ -388,6 +394,16 @@ namespace WoWTools.Uploader
         {
             SaveButton.Content = "Select a valid WoW directory and check it first";
             SaveButton.IsEnabled = false;
+        }
+
+        private void StartupLabel_OnMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            StartupBox.IsChecked = !StartupBox.IsChecked;
+        }
+
+        private void NotificationLabel_OnMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            NotificationBox.IsChecked = !NotificationBox.IsChecked;
         }
     }
 }

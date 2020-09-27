@@ -30,12 +30,12 @@
         <!-- Startup -->
         <Label Content="Add to startup?" HorizontalAlignment="Left" Margin="10,117,0,0" VerticalAlignment="Top"/>
         <CheckBox IsChecked="True" x:Name="StartupBox" HorizontalAlignment="Left" Margin="138,123,0,0" VerticalAlignment="Top"/>
-        <Label Content="This is required to automatically upload hotfixes after WoW closes." HorizontalAlignment="Left" Margin="154,119,0,0" VerticalAlignment="Top" FontSize="10" Height="25"/>
+        <Label x:Name="StartupLabel" MouseDown="StartupLabel_OnMouseDown" Content="This is required to automatically upload hotfixes after WoW closes." HorizontalAlignment="Left" Margin="154,119,0,0" VerticalAlignment="Top" FontSize="10" Height="25"/>
 
         <!-- Notifications -->
         <Label Content="Show notifications?" HorizontalAlignment="Left" Margin="10,137,0,0" VerticalAlignment="Top"/>
         <CheckBox IsChecked="True" x:Name="NotificationBox" HorizontalAlignment="Left" Margin="138,143,0,0" VerticalAlignment="Top"/>
-        <Label Content="Whether or not to show a notification after succesful uploads." HorizontalAlignment="Left" Margin="154,139,0,0" VerticalAlignment="Top" FontSize="10" Height="25"/>
+        <Label x:Name="NotificationLabel" MouseDown="NotificationLabel_OnMouseDown" Content="Whether or not to show a notification after succesful uploads." HorizontalAlignment="Left" Margin="154,139,0,0" VerticalAlignment="Top" FontSize="10" Height="25"/>
         
         <Button Content="Select a valid WoW directory first" IsEnabled="False" x:Name="SaveButton" HorizontalAlignment="Left" Margin="10,172,0,0" Click="SaveButton_Click" VerticalAlignment="Top" Width="427"/>
     </Grid>
