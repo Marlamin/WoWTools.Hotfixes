@@ -1,12 +1,14 @@
 ﻿using Hardcodet.Wpf.TaskbarNotification;
 using Microsoft.Win32;
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Configuration;
 using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 
 namespace WoWTools.Uploader
@@ -19,7 +21,8 @@ namespace WoWTools.Uploader
         private string cacheFolder;
         private BackgroundWorker uploadWorker;
         private bool showNotifications;
-
+        private List<FileSystemWatcher> watchers = new List<FileSystemWatcher>();
+        private Dictionary<string, string> activeInstalls = new Dictionary<string, string>();
         public MainWindow()
         {
             InitializeComponent();
@@ -50,39 +53,58 @@ namespace WoWTools.Uploader
             uploadWorker.DoWork += UploadWorker_DoWork;
             uploadWorker.RunWorkerCompleted += UploadWorker_RunWorkerCompleted;
 
-
             var config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None).AppSettings.Settings;
-            cacheFolder = Path.Combine(config["installDir"].Value, "_retail_", "Cache", "ADB", "enUS");
-            if (Directory.Exists(cacheFolder))
+            foreach (var directory in Directory.GetDirectories(config["installDir"].Value))
             {
+                if (!File.Exists(Path.Combine(directory, ".flavor.info"))) { continue; }
+                var flavorLines = File.ReadAllLines(Path.Combine(directory, ".flavor.info"));
+                if (flavorLines.Length != 2 || flavorLines[1].Substring(0, 3) != "wow")
+                {
+                    Console.WriteLine("Malformed .flavor.info");
+                    continue;
+                }
+
+                var cacheFolder = Path.Combine(directory, "Cache", "ADB", "enUS");
+
+                if (!Directory.Exists(cacheFolder)) continue;
+
+                activeInstalls.Add(flavorLines[1], directory);
+
                 var watcher = new FileSystemWatcher();
                 watcher.Renamed += Watcher_Renamed;
                 watcher.Path = cacheFolder;
                 watcher.Filter = "*.bin";
                 watcher.EnableRaisingEvents = true;
-            }
-
-            var ptrFolder = Path.Combine(config["installDir"].Value, "_ptr_", "Cache", "ADB", "enUS");
-            if (Directory.Exists(ptrFolder))
-            {
-                var watcherPTR = new FileSystemWatcher();
-                watcherPTR.Renamed += Watcher_Renamed;
-                watcherPTR.Path = ptrFolder;
-                watcherPTR.Filter = "*.bin";
-                watcherPTR.EnableRaisingEvents = true;
-            }
-
-            var betaFolder = Path.Combine(config["installDir"].Value, "_beta_", "Cache", "ADB", "enUS");
-            if (Directory.Exists(betaFolder))
-            {
-                var watcherBeta = new FileSystemWatcher();
-                watcherBeta.Renamed += Watcher_Renamed;
-                watcherBeta.Path = betaFolder;
-                watcherBeta.Filter = "*.bin";
-                watcherBeta.EnableRaisingEvents = true;
+                watchers.Add(watcher);
             }
 
             showNotifications = bool.Parse(config["showNotifications"].Value);
+
+            var menu = new ContextMenu();
+
+            foreach (var activeInstall in activeInstalls)
+            {
+                var installItem = new MenuItem();
+                var installName = activeInstall.Key;
+                installItem.Name = installName;
+                installItem.Header = "Upload " + installName;
+                installItem.Click += Upload_PreviewMouseUp;
+                menu.Items.Add(installItem);
+            }
+
+            var settingsItem = new MenuItem();
+            settingsItem.Name = "Settings";
+            settingsItem.Header = "Settings";
+            settingsItem.Click += Settings_PreviewMouseUp;
+            menu.Items.Add(settingsItem);
+
+            var exitItem = new MenuItem();
+            exitItem.Name = "Exit";
+            exitItem.Header = "Exit";
+            exitItem.Click += Exit_PreviewMouseUp;
+            menu.Items.Add(exitItem);
+
+            this.TBIcon.ContextMenu = menu;
 
             CheckForUpdates();
         }
@@ -103,7 +125,7 @@ namespace WoWTools.Uploader
             }
             catch(Exception e)
             {
-                Console.WriteLine("An error occured checking for updates: " + e.Message);
+                Console.WriteLine("An error occurred checking for updates: " + e.Message);
             }
         }
 
@@ -203,7 +225,7 @@ namespace WoWTools.Uploader
             }
         }
 
-        private void Exit_PreviewMouseUp(object sender, MouseButtonEventArgs e)
+        private void Exit_PreviewMouseUp(object sender, RoutedEventArgs e)
         {
             TBIcon.Visibility = Visibility.Collapsed;
             Environment.Exit(0);
@@ -385,9 +407,17 @@ namespace WoWTools.Uploader
             }
         }
 
-        private void Settings_PreviewMouseUp(object sender, MouseButtonEventArgs e)
+        private void Settings_PreviewMouseUp(object sender, RoutedEventArgs e)
         {
             LoadSettings();
+        }
+
+        private void Upload_PreviewMouseUp(object sender, RoutedEventArgs e)
+        {
+            var actualSender = (MenuItem) sender;
+
+            var senderDir = activeInstalls[actualSender.Name];
+            UploadCache(Path.Combine(senderDir, "Cache", "ADB", "enUS", "DBCache.bin"));
         }
 
         private void BaseDir_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e)

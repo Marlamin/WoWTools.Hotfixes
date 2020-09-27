@@ -9,12 +9,6 @@
         Icon="pack://application:,,,/WoWTools.Uploader;component/images/cog.ico" Title="WoW.Tools Hotfixes Uploader" Height="250" Width="475">
     <Grid>
         <tb:TaskbarIcon Visibility="Collapsed" Name="TBIcon" IconSource="pack://application:,,,/WoWTools.Uploader;component/images/cog.ico" ToolTipText="WoW.Tools Uploader" MenuActivation="RightClick" NoLeftClickDelay="True">
-            <tb:TaskbarIcon.ContextMenu>
-                <ContextMenu Name="IconContextMenu">
-                    <MenuItem Name="Settings" Header="Settings" PreviewMouseUp="Settings_PreviewMouseUp" />
-                    <MenuItem Name="Exit" Header="Exit" PreviewMouseUp="Exit_PreviewMouseUp" />
-                </ContextMenu>
-            </tb:TaskbarIcon.ContextMenu>
         </tb:TaskbarIcon>
         <!-- API Token -->
         <TextBox x:Name="APIToken" HorizontalAlignment="Left" Margin="138,14,0,0" Text="" TextWrapping="Wrap" VerticalAlignment="Top" Width="299"/>
