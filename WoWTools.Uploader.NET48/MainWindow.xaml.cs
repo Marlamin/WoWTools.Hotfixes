@@ -212,6 +212,12 @@ namespace WoWTools.Uploader
                         }
                     }
 
+                    var buildInfoEntry = archive.CreateEntry(".build.info", CompressionLevel.Optimal);
+                    using (var buildInfoEntryStream = buildInfoEntry.Open())
+                    {
+                        File.OpenRead(Path.Combine(ConfigurationManager.AppSettings["installDir"], ".build.info")).CopyTo(buildInfoEntryStream);
+                    }
+
                     if (addonUploads)
                     {
                         var wtfPath = Path.Combine(Path.GetDirectoryName(path), @"..\..\..\WTF");
@@ -233,7 +239,6 @@ namespace WoWTools.Uploader
                     }
                 }
 
-                webClient.DefaultRequestHeaders.Add("WT-BuildInfo", Convert.ToBase64String(File.ReadAllBytes(Path.Combine(ConfigurationManager.AppSettings["installDir"], ".build.info"))));
                 webClient.DefaultRequestHeaders.Add("WT-UserToken", ConfigurationManager.AppSettings["APIToken"]);
                 webClient.DefaultRequestHeaders.Add("User-Agent", "WoW.Tools uploader");
                 var fileBytes = memStream.ToArray();
