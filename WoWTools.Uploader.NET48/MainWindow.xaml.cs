@@ -21,6 +21,7 @@ namespace WoWTools.Uploader
         private string cacheFolder;
         private BackgroundWorker uploadWorker;
         private bool showNotifications;
+        private bool addonUploads;
         private List<FileSystemWatcher> watchers = new List<FileSystemWatcher>();
         private Dictionary<string, string> activeInstalls = new Dictionary<string, string>();
         public MainWindow()
@@ -79,6 +80,7 @@ namespace WoWTools.Uploader
             }
 
             showNotifications = bool.Parse(config["showNotifications"].Value);
+            addonUploads = bool.Parse(config["addonUploads"].Value);
 
             var menu = new ContextMenu();
 
@@ -191,7 +193,7 @@ namespace WoWTools.Uploader
 
                 using (var archive = new ZipArchive(memStream, ZipArchiveMode.Create))
                 {
-                    var entry = archive.CreateEntry("DBCache.bin");
+                    var entry = archive.CreateEntry("DBCache.bin", CompressionLevel.Optimal);
                     using (var entryStream = entry.Open())
                     {
                         cacheStream.CopyTo(entryStream);
@@ -202,11 +204,30 @@ namespace WoWTools.Uploader
                     {
                         foreach (var wdbFile in Directory.GetFiles(wdbPath, "*.wdb"))
                         {
-                            var wdbEntry = archive.CreateEntry(Path.GetFileName(wdbFile));
+                            var wdbEntry = archive.CreateEntry(Path.GetFileName(wdbFile), CompressionLevel.Optimal);
                             using (var wdbEntryStream = wdbEntry.Open())
-                            using (var wdbFileStream = new MemoryStream(File.ReadAllBytes(wdbFile)))
                             {
-                                wdbFileStream.CopyTo(wdbEntryStream);
+                                File.OpenRead(wdbFile).CopyTo(wdbEntryStream);
+                            }
+                        }
+                    }
+
+                    if (addonUploads)
+                    {
+                        var wtfPath = Path.Combine(Path.GetDirectoryName(path), @"..\..\..\WTF");
+                        if (Directory.Exists(wtfPath))
+                        {
+                            foreach (var wtfFile in Directory.GetFiles(wtfPath, "*.lua*", SearchOption.AllDirectories))
+                            {
+                                if (wtfFile.Contains("SavedVariables") &&
+                                    (Path.GetFileName(wtfFile) == "WoWDBProfiler.lua" || Path.GetFileName(wtfFile) == "WoWDBProfiler.lua.bak" || Path.GetFileName(wtfFile) == "+Wowhead_Looter.lua"))
+                                {
+                                    var wtfEntry = archive.CreateEntry(Path.GetFileName(wtfFile), CompressionLevel.Optimal);
+                                    using (var wtfEntryStream = wtfEntry.Open())
+                                    {
+                                        File.OpenRead(wtfFile).CopyTo(wtfEntryStream);
+                                    }
+                                }
                             }
                         }
                     }
@@ -283,6 +304,21 @@ namespace WoWTools.Uploader
             else
             {
                 config.AppSettings.Settings["showNotifications"].Value = "false";
+            }
+
+            /* Addon uploads */
+            if (config.AppSettings.Settings["addonUploads"] == null)
+            {
+                config.AppSettings.Settings.Add("addonUploads", "false");
+            }
+
+            if ((bool)AddonBox.IsChecked)
+            {
+                config.AppSettings.Settings["addonUploads"].Value = "true";
+            }
+            else
+            {
+                config.AppSettings.Settings["addonUploads"].Value = "false";
             }
 
             config.Save(ConfigurationSaveMode.Modified);
@@ -394,6 +430,17 @@ namespace WoWTools.Uploader
 
             NotificationBox.IsChecked = showNotifications;
 
+            if (config["addonUploads"] == null || config["addonUploads"].Value == "true")
+            {
+                addonUploads = true;
+            }
+            else
+            {
+                addonUploads = false;
+            }
+
+            AddonBox.IsChecked = addonUploads;
+
             var rk = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
 
             var rkResult = (string) rk.GetValue("WoW.tools Uploader", "Not found");
@@ -434,6 +481,11 @@ namespace WoWTools.Uploader
         private void NotificationLabel_OnMouseDown(object sender, MouseButtonEventArgs e)
         {
             NotificationBox.IsChecked = !NotificationBox.IsChecked;
+        }
+
+        private void AddonLabel_OnMouseDown(object sender, MouseButtonEventArgs e)
+        {
+            AddonBox.IsChecked = !AddonBox.IsChecked;
         }
     }
 }
