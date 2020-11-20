@@ -226,7 +226,7 @@ namespace WoWTools.Uploader
                             foreach (var wtfFile in Directory.GetFiles(wtfPath, "*.lua*", SearchOption.AllDirectories))
                             {
                                 if (wtfFile.Contains("SavedVariables") &&
-                                    (Path.GetFileName(wtfFile) == "WoWDBProfiler.lua" || Path.GetFileName(wtfFile) == "WoWDBProfiler.lua.bak" || Path.GetFileName(wtfFile) == "+Wowhead_Looter.lua"))
+                                    (Path.GetFileName(wtfFile) == "WoWDBProfiler.lua" || Path.GetFileName(wtfFile) == "WoWDBProfiler.lua.bak" || Path.GetFileName(wtfFile) == "+Wowhead_Looter.lua" || Path.GetFileName(wtfFile) == "+Wowhead_Looter.lua.bak"))
                                 {
                                     var wtfEntry = archive.CreateEntry(Path.GetFileName(wtfFile), CompressionLevel.Optimal);
                                     using (var wtfEntryStream = wtfEntry.Open())

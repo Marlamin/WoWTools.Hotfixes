@@ -35,7 +35,7 @@
         <Label Content="Upload addon data?" HorizontalAlignment="Left" Margin="10,157,0,0" VerticalAlignment="Top"/>
         <CheckBox IsChecked="True" x:Name="AddonBox" HorizontalAlignment="Left" Margin="138,163,0,0" VerticalAlignment="Top"/>
         <Label x:Name="AddonLabel" MouseDown="AddonLabel_OnMouseDown" Content="Upload in-game data gathered by WoWDB/Wowhead addons." HorizontalAlignment="Left" Margin="154,153,0,0" VerticalAlignment="Top" FontSize="10" Height="25"/>
-        <Label x:Name="AddonLabel2" Content="Note: While not used by WoW.tools, it contains character/realm name." HorizontalAlignment="Left" Margin="154,165,0,0" VerticalAlignment="Top" FontSize="10" Height="25"/>
+        <Label x:Name="AddonLabel2" MouseDown="AddonLabel_OnMouseDown" Content="Note: While not used by WoW.tools, it contains character/realm name." HorizontalAlignment="Left" Margin="154,165,0,0" VerticalAlignment="Top" FontSize="10" Height="25"/>
 
         <Button Content="Select a valid WoW directory first" IsEnabled="False" x:Name="SaveButton" HorizontalAlignment="Left" Margin="10,190,0,0" Click="SaveButton_Click" VerticalAlignment="Top" Width="427"/>
     </Grid>
