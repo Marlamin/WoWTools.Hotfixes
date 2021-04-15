@@ -543,7 +543,7 @@ namespace WoWTools.WDBUpdater
 
                 var numCreatureDisplays = bin.ReadUInt32();
                 entries[id].Add("NumCreatureDisplays", numCreatureDisplays.ToString());
-                entries[id].Add("UnkBFAMultiplier", bin.ReadSingle().ToString());
+                entries[id].Add("ProbabilityCount", bin.ReadSingle().ToString());
 
                 for(var i = 0; i < numCreatureDisplays; i++)
                 {
@@ -563,22 +563,23 @@ namespace WoWTools.WDBUpdater
                 entries[id].Add("TrackingQuestID", bin.ReadUInt32().ToString());
                 entries[id].Add("VignetteID", bin.ReadUInt32().ToString());
                 entries[id].Add("CreatureClassMask", bin.ReadUInt32().ToString());
+
+                if (wdb.buildInfo.expansion >= 9 && wdb.buildInfo.major >= 1)
+                {
+                    entries[id].Add("CreatureDifficultyID", bin.ReadUInt32().ToString());
+                }
+
                 entries[id].Add("UIWidgetParentSetID", bin.ReadUInt32().ToString());
 
                 if (wdb.buildInfo.expansion >= 9)
                 {
-                    entries[id].Add("UnkConditionID", bin.ReadUInt32().ToString());
+                    entries[id].Add("UIWidgetSetUnitConditionID", bin.ReadUInt32().ToString());
                 }
 
                 if (wdb.buildInfo.expansion == 8 && wdb.clientBuild >= 34769)
                 {
                     entries[id].Add("BfA_Int_1", bin.ReadUInt32().ToString());
                     entries[id].Add("BfA_Int_2", bin.ReadUInt32().ToString());
-                }
-
-                if(wdb.buildInfo.expansion >= 9 && wdb.buildInfo.major >= 1)
-                {
-                    entries[id].Add("SL_Int_1", bin.ReadUInt32().ToString());
                 }
 
                 entries[id].Add("Title", ds.GetString(TitleLength).Trim('\0'));
