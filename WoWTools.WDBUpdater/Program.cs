@@ -62,6 +62,23 @@ namespace WoWTools.WDBUpdater
                 wdb.formatVersion = bin.ReadUInt32();
                 wdb.buildInfo = GetBuildInfoFromDB(wdb.clientBuild);
 
+                var humanReadableJsonOptions = new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    WriteIndented = true
+                };
+
+                if (wdb.clientLocale != "enUS" && wdb.clientLocale != "enGB")
+                {
+                    if (outputType == "json")
+                    {
+                        var wdbJson = JsonSerializer.Serialize(new Dictionary<string, Dictionary<string, string>>(), humanReadableJsonOptions);
+                        Console.WriteLine(wdbJson);
+                    }
+
+                    return;
+                }
+
                 // All WDB structures below are based on Simca's excellent 010 template.
 
                 switch (wdb.identifier)
@@ -86,12 +103,7 @@ namespace WoWTools.WDBUpdater
                         break;
                 }
 
-                var humanReadableJsonOptions = new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true
-                };
-
+    
                 var storageJsonOptions = new JsonSerializerOptions
                 {
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -226,9 +238,9 @@ namespace WoWTools.WDBUpdater
                 Console.WriteLine("connectionstring.txt not found! Need this for build lookup, using hardcoded build.");
                 dbBuild.version = "9.0.1.35078";
                 dbBuild.expansion = 9;
-                dbBuild.major = 0;
-                dbBuild.minor = 1;
-                dbBuild.build = 35078;
+                dbBuild.major = 1;
+                dbBuild.minor = 0;
+                dbBuild.build = 38312;
                 return dbBuild;
 #else
                 throw new Exception("connectionstring.txt not found! Need this for build lookup.");
@@ -381,6 +393,14 @@ namespace WoWTools.WDBUpdater
                 entries[id].Add("RewardNumSkillUps", bin.ReadUInt32().ToString());
                 entries[id].Add("PortraitGiverDisplayID", bin.ReadUInt32().ToString());
                 entries[id].Add("BFA_UnkDisplayID", bin.ReadUInt32().ToString());
+
+                // Might be a few fields off, so many 0s
+                if (wdb.buildInfo.expansion >= 9 && wdb.buildInfo.major >= 1)
+                {
+                    entries[id].Add("SL_Int_1", bin.ReadUInt32().ToString());
+                }
+
+                // Might be one or two fields off
                 entries[id].Add("PortraitTurnInDisplayID", bin.ReadUInt32().ToString());
 
                 for (var i = 0; i < 5; i++)
@@ -554,6 +574,11 @@ namespace WoWTools.WDBUpdater
                 {
                     entries[id].Add("BfA_Int_1", bin.ReadUInt32().ToString());
                     entries[id].Add("BfA_Int_2", bin.ReadUInt32().ToString());
+                }
+
+                if(wdb.buildInfo.expansion >= 9 && wdb.buildInfo.major >= 1)
+                {
+                    entries[id].Add("SL_Int_1", bin.ReadUInt32().ToString());
                 }
 
                 entries[id].Add("Title", ds.GetString(TitleLength).Trim('\0'));
