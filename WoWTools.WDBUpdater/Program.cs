@@ -196,7 +196,14 @@ namespace WoWTools.WDBUpdater
                                 }
                                 else
                                 {
-                                    if (dbEntry.json != serializedJson)
+                                    // Don't let classic or older builds overwrite existing records, will break classic updates, TODO: Needs proper checking between retail/ptr, maybe DBD build comparison code?
+                                    if (wdb.buildInfo.expansion == 1 && wdb.buildInfo.major == 13)
+                                        continue;
+
+                                    if (wdb.buildInfo.expansion == 2 && wdb.buildInfo.major == 5)
+                                        continue;
+
+                                    if (dbEntry.json != serializedJson && wdb.clientBuild > dbEntry.lastUpdatedBuild)
                                     {
                                         Console.WriteLine("JSON for " + entry.Key + " is changed updating! Before: \n " + dbEntry.json + "\n After: \n" + serializedJson);
                                         updateCmd.Parameters["id"].Value = entry.Key;
@@ -392,7 +399,7 @@ namespace WoWTools.WDBUpdater
                 entries[id].Add("RewardSkillLineID", bin.ReadUInt32().ToString());
                 entries[id].Add("RewardNumSkillUps", bin.ReadUInt32().ToString());
                 entries[id].Add("PortraitGiverDisplayID", bin.ReadUInt32().ToString());
-                entries[id].Add("BFA_UnkDisplayID", bin.ReadUInt32().ToString());
+                entries[id].Add("PortraitGiverMountDisplayID", bin.ReadUInt32().ToString());
 
                 // Might be a few fields off, so many 0s
                 if (wdb.buildInfo.expansion >= 9 && wdb.buildInfo.major >= 1)
@@ -433,7 +440,7 @@ namespace WoWTools.WDBUpdater
                 if (wdb.recordVersion > 11)
                 {
                     entries[id].Add("ManagedWorldStateID", bin.ReadUInt32().ToString());
-                    entries[id].Add("B31984_Int_1", bin.ReadUInt32().ToString());
+                    entries[id].Add("QuestSessionBonus", bin.ReadUInt32().ToString());
                 }
 
                 if (wdb.clientBuild >= 35078 && wdb.buildInfo.expansion >= 9)
@@ -543,7 +550,7 @@ namespace WoWTools.WDBUpdater
 
                 var numCreatureDisplays = bin.ReadUInt32();
                 entries[id].Add("NumCreatureDisplays", numCreatureDisplays.ToString());
-                entries[id].Add("ProbabilityCount", bin.ReadSingle().ToString());
+                entries[id].Add("TotalProbability", bin.ReadSingle().ToString());
 
                 for(var i = 0; i < numCreatureDisplays; i++)
                 {
