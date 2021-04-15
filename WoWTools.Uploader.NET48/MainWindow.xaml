@@ -13,7 +13,7 @@
         <!-- API Token -->
         <TextBox x:Name="APIToken" HorizontalAlignment="Left" Margin="138,14,0,0" Text="" TextWrapping="Wrap" VerticalAlignment="Top" Width="299"/>
         <Label Content="WoW.Tools API token" HorizontalAlignment="Left" Margin="10,10,0,0" VerticalAlignment="Top"/>
-        <Label Content="You can find this on WoW.tools/uploader.php after logging in." HorizontalAlignment="Left" Margin="147,32,0,0" VerticalAlignment="Top" FontSize="10" Height="25"/>
+        <Label Content="You can find this on WoW.tools/uploader/ after logging in." HorizontalAlignment="Left" Margin="147,32,0,0" VerticalAlignment="Top" FontSize="10" Height="25"/>
 
         <!-- Directory -->
         <Label Content="WoW Directory" HorizontalAlignment="Left" Margin="10,70,0,0" VerticalAlignment="Top" Width="123"/>
