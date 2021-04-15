@@ -125,7 +125,7 @@ namespace WoWTools.Uploader
                     }
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine("An error occurred checking for updates: " + e.Message);
             }
@@ -207,7 +207,10 @@ namespace WoWTools.Uploader
                             var wdbEntry = archive.CreateEntry(Path.GetFileName(wdbFile), CompressionLevel.Optimal);
                             using (var wdbEntryStream = wdbEntry.Open())
                             {
-                                File.OpenRead(wdbFile).CopyTo(wdbEntryStream);
+                                using (var fr = File.OpenRead(wdbFile))
+                                {
+                                    fr.CopyTo(wdbEntryStream);
+                                }
                             }
                         }
                     }
@@ -215,7 +218,10 @@ namespace WoWTools.Uploader
                     var buildInfoEntry = archive.CreateEntry(".build.info", CompressionLevel.Optimal);
                     using (var buildInfoEntryStream = buildInfoEntry.Open())
                     {
-                        File.OpenRead(Path.Combine(ConfigurationManager.AppSettings["installDir"], ".build.info")).CopyTo(buildInfoEntryStream);
+                        using (var fr = File.OpenRead(Path.Combine(ConfigurationManager.AppSettings["installDir"], ".build.info")))
+                        {
+                            fr.CopyTo(buildInfoEntryStream);
+                        }
                     }
 
                     if (addonUploads)
@@ -231,7 +237,10 @@ namespace WoWTools.Uploader
                                     var wtfEntry = archive.CreateEntry(Path.GetFileName(wtfFile), CompressionLevel.Optimal);
                                     using (var wtfEntryStream = wtfEntry.Open())
                                     {
-                                        File.OpenRead(wtfFile).CopyTo(wtfEntryStream);
+                                        using (var fr = File.OpenRead(wtfFile))
+                                        {
+                                            fr.CopyTo(wtfEntryStream);
+                                        }
                                     }
                                 }
                             }
@@ -448,7 +457,7 @@ namespace WoWTools.Uploader
 
             var rk = Registry.CurrentUser.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run", true);
 
-            var rkResult = (string) rk.GetValue("WoW.tools Uploader", "Not found");
+            var rkResult = (string)rk.GetValue("WoW.tools Uploader", "Not found");
             if (rkResult == "Not found")
             {
                 StartupBox.IsChecked = false;
@@ -466,7 +475,7 @@ namespace WoWTools.Uploader
 
         private void Upload_PreviewMouseUp(object sender, RoutedEventArgs e)
         {
-            var actualSender = (MenuItem) sender;
+            var actualSender = (MenuItem)sender;
 
             var senderDir = activeInstalls[actualSender.Name];
             UploadCache(Path.Combine(senderDir, "Cache", "ADB", "enUS", "DBCache.bin"));
