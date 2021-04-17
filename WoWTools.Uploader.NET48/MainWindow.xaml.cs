@@ -80,7 +80,15 @@ namespace WoWTools.Uploader
             }
 
             showNotifications = bool.Parse(config["showNotifications"].Value);
-            addonUploads = bool.Parse(config["addonUploads"].Value);
+
+            if (config["addonUploads"] != null)
+            {
+                addonUploads = bool.Parse(config["addonUploads"].Value);
+            }
+            else
+            {
+                addonUploads = false;
+            }
 
             var menu = new ContextMenu();
 
@@ -178,27 +186,39 @@ namespace WoWTools.Uploader
                 return new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest);
             }
 
-            using (var webClient = new HttpClient())
-            using (var cacheStream = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-            using (var memStream = new MemoryStream())
-            using (var bin = new BinaryReader(cacheStream))
+            using var webClient = new HttpClient();
+            using var memStream = new MemoryStream();
+            using (var archive = new ZipArchive(memStream, ZipArchiveMode.Create))
             {
-                if (new string(bin.ReadChars(4)) != "XFTH")
+                // DBCache.bin
+                try
                 {
-                    Application.Current.Dispatcher.Invoke(new Action(() => { Notify("Error uploading cache!", "Cache file is invalid!", BalloonIcon.Error); }));
-                    return new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest);
+                    using (var cacheStream = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    using (var bin = new BinaryReader(cacheStream))
+                    {
+                        if (new string(bin.ReadChars(4)) != "XFTH")
+                        {
+                            Application.Current.Dispatcher.Invoke(new Action(() => { Notify("Error uploading cache!", "Cache file is invalid!", BalloonIcon.Error); }));
+                            return new HttpResponseMessage(System.Net.HttpStatusCode.BadRequest);
+                        }
+
+                        bin.BaseStream.Position = 0;
+
+                        var entry = archive.CreateEntry("DBCache.bin", CompressionLevel.Optimal);
+                        using (var entryStream = entry.Open())
+                        {
+                            cacheStream.CopyTo(entryStream);
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Unable to open/compress DBCache.bin: " + e.Message);
                 }
 
-                bin.BaseStream.Position = 0;
-
-                using (var archive = new ZipArchive(memStream, ZipArchiveMode.Create))
+                // WDB files
+                try
                 {
-                    var entry = archive.CreateEntry("DBCache.bin", CompressionLevel.Optimal);
-                    using (var entryStream = entry.Open())
-                    {
-                        cacheStream.CopyTo(entryStream);
-                    }
-
                     var wdbPath = Path.Combine(Path.GetDirectoryName(path), @"..\..\WDB\enUS");
                     if (Directory.Exists(wdbPath))
                     {
@@ -214,7 +234,15 @@ namespace WoWTools.Uploader
                             }
                         }
                     }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Unable to open/compress WDB files: " + e.Message);
+                }
 
+                // .build.info
+                try
+                {
                     var buildInfoEntry = archive.CreateEntry(".build.info", CompressionLevel.Optimal);
                     using (var buildInfoEntryStream = buildInfoEntry.Open())
                     {
@@ -223,16 +251,24 @@ namespace WoWTools.Uploader
                             fr.CopyTo(buildInfoEntryStream);
                         }
                     }
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine("Unable to open/compress .build.info: " + e.Message);
+                }
 
-                    if (addonUploads)
+                // Addon data
+                if (addonUploads)
+                {
+                    var wtfPath = Path.Combine(Path.GetDirectoryName(path), @"..\..\..\WTF");
+                    if (Directory.Exists(wtfPath))
                     {
-                        var wtfPath = Path.Combine(Path.GetDirectoryName(path), @"..\..\..\WTF");
-                        if (Directory.Exists(wtfPath))
+                        foreach (var wtfFile in Directory.GetFiles(wtfPath, "*.lua*", SearchOption.AllDirectories))
                         {
-                            foreach (var wtfFile in Directory.GetFiles(wtfPath, "*.lua*", SearchOption.AllDirectories))
+                            if (wtfFile.Contains("SavedVariables") &&
+                                (Path.GetFileName(wtfFile) == "WoWDBProfiler.lua" || Path.GetFileName(wtfFile) == "WoWDBProfiler.lua.bak" || Path.GetFileName(wtfFile) == "+Wowhead_Looter.lua" || Path.GetFileName(wtfFile) == "+Wowhead_Looter.lua.bak"))
                             {
-                                if (wtfFile.Contains("SavedVariables") &&
-                                    (Path.GetFileName(wtfFile) == "WoWDBProfiler.lua" || Path.GetFileName(wtfFile) == "WoWDBProfiler.lua.bak" || Path.GetFileName(wtfFile) == "+Wowhead_Looter.lua" || Path.GetFileName(wtfFile) == "+Wowhead_Looter.lua.bak"))
+                                try
                                 {
                                     var wtfEntry = archive.CreateEntry(Path.GetFileName(wtfFile), CompressionLevel.Optimal);
                                     using (var wtfEntryStream = wtfEntry.Open())
@@ -243,21 +279,25 @@ namespace WoWTools.Uploader
                                         }
                                     }
                                 }
+                                catch (Exception e)
+                                {
+                                    Console.WriteLine("Unable to open/compress " + wtfFile + ": " + e.Message);
+                                }
                             }
                         }
                     }
                 }
-
-                webClient.DefaultRequestHeaders.Add("WT-UserToken", ConfigurationManager.AppSettings["APIToken"]);
-                webClient.DefaultRequestHeaders.Add("User-Agent", "WoW.Tools uploader");
-                var fileBytes = memStream.ToArray();
-
-                MultipartFormDataContent form = new MultipartFormDataContent();
-                form.Add(new ByteArrayContent(fileBytes, 0, fileBytes.Length), "files", "Cache.zip");
-                var result = webClient.PostAsync("https://wow.tools/dbc/api/cache/uploadzip", form).Result;
-                Console.WriteLine("Return status: " + result.StatusCode);
-                return result;
             }
+
+            webClient.DefaultRequestHeaders.Add("WT-UserToken", ConfigurationManager.AppSettings["APIToken"]);
+            webClient.DefaultRequestHeaders.Add("User-Agent", "WoW.Tools uploader");
+            var fileBytes = memStream.ToArray();
+
+            MultipartFormDataContent form = new MultipartFormDataContent();
+            form.Add(new ByteArrayContent(fileBytes, 0, fileBytes.Length), "files", "Cache.zip");
+            var result = webClient.PostAsync("https://wow.tools/dbc/api/cache/uploadzip", form).Result;
+            Console.WriteLine("Return status: " + result.StatusCode);
+            return result;
         }
 
         private void Exit_PreviewMouseUp(object sender, RoutedEventArgs e)
