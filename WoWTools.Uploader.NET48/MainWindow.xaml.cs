@@ -484,7 +484,7 @@ namespace WoWTools.Uploader
 
             NotificationBox.IsChecked = showNotifications;
 
-            if (config["addonUploads"] == null || config["addonUploads"].Value == "true")
+            if (config["addonUploads"] != null && config["addonUploads"].Value == "true")
             {
                 addonUploads = true;
             }
