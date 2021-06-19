@@ -404,7 +404,7 @@ namespace WoWTools.WDBUpdater
                 // Might be a few fields off, so many 0s
                 if (wdb.buildInfo.expansion >= 9 && wdb.buildInfo.major >= 1)
                 {
-                    entries[id].Add("SL_Int_1", bin.ReadUInt32().ToString());
+                    entries[id].Add("PortraitModelSceneID", bin.ReadUInt32().ToString());
                 }
 
                 // Might be one or two fields off
@@ -504,6 +504,12 @@ namespace WoWTools.WDBUpdater
         private static Dictionary<string, Dictionary<string, string>> ReadCreatureEntries(BinaryReader bin, wdbCache wdb)
         {
             var entries = new Dictionary<string, Dictionary<string, string>>();
+
+            if(wdb.buildInfo.expansion == 2)
+            {
+                Console.WriteLine("Classic creature cache, skipping..");
+                return entries;
+            }
 
             while (bin.BaseStream.Position < bin.BaseStream.Length)
             {
