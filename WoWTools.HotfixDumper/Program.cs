@@ -1,8 +1,7 @@
-﻿using Newtonsoft.Json;
+﻿using DBDefsLib;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using DBDefsLib;
 using static DBDefsLib.Structs;
 
 namespace WoWTools.HotfixDumper
@@ -17,7 +16,7 @@ namespace WoWTools.HotfixDumper
             }
 
             var dumpKeys = false;
-            if(args.Length == 3 && args[2] == "true")
+            if (args.Length == 3 && args[2] == "true")
             {
                 dumpKeys = true;
             }
@@ -44,7 +43,7 @@ namespace WoWTools.HotfixDumper
                 tableHashes.Add(Utils.Hash(dbName.ToUpper()), dbName);
             }
 
-            var xfthMagic = 'X' << 0 | 'F' << 8 | 'T' << 16 | 'H' << 24;
+            const int xfthMagic = 'X' << 0 | 'F' << 8 | 'T' << 16 | 'H' << 24;
 
             uint build;
 
@@ -52,6 +51,8 @@ namespace WoWTools.HotfixDumper
 
             using (var ms = new MemoryStream(File.ReadAllBytes(hotfixFile)))
             using (var bin = new BinaryReader(ms))
+            //using (var fs = new FileStream(hotfixFile, FileMode.Open, FileAccess.Read, FileShare.Read, 4096 * 16))
+            //using (var bin = new BinaryReader(fs))
             {
                 if (bin.ReadUInt32() != xfthMagic)
                     throw new Exception("Invalid hotfix file!");
@@ -62,15 +63,20 @@ namespace WoWTools.HotfixDumper
 
                 build = bin.ReadUInt32();
 
-                var hash = bin.ReadBytes(32);
+                //var hash = bin.ReadBytes(32);
+                bin.BaseStream.Position += 32;
 
                 while (bin.BaseStream.Length > bin.BaseStream.Position)
                 {
                     var hotfix = new DBCacheEntry();
                     hotfix.header = bin.Read<DBCacheEntryHeader>();
-                    if (tableHashes.ContainsKey(hotfix.header.tableHash))
+
+                    if (hotfix.header.magic != xfthMagic)
+                        throw new Exception("Invalid hotfix entry magic!");
+
+                    if (tableHashes.TryGetValue(hotfix.header.tableHash, out var tname))
                     {
-                        hotfix.tableName = tableHashes[hotfix.header.tableHash];
+                        hotfix.tableName = tname;
                     }
                     else
                     {
@@ -79,26 +85,23 @@ namespace WoWTools.HotfixDumper
 
                     hotfix.data = bin.ReadBytes(hotfix.header.dataSize);
 
-                    if (hotfix.header.magic != xfthMagic)
-                        throw new Exception("Invalid hotfix entry magic!");
-
                     hotfixes.Add(hotfix);
                 }
             }
 
             var dbdCache = new Dictionary<string, DBDefinition>();
 
-            var filteredList = new List<HotfixEntry>();
-            foreach(var hotfix in hotfixes)
+            var filteredList = new List<HotfixEntry>(hotfixes.Count);
+            var md5 = System.Security.Cryptography.MD5.Create();
+            foreach (var hotfix in hotfixes)
             {
                 var hotfixDataMD5 = "";
-                if(hotfix.data.Length > 0)
+                if (hotfix.data.Length > 0)
                 {
-                    using (var md5 = System.Security.Cryptography.MD5.Create())
-                    {
-                        md5.TransformFinalBlock(hotfix.data, 0, hotfix.data.Length);
-                        hotfixDataMD5 = BitConverter.ToString(md5.Hash).Replace("-", string.Empty).ToLower();
-                    }
+                    Span<byte> md5Hash = md5.ComputeHash(hotfix.data);
+                    //hotfixDataMD5 = md5Hash.ToHexString();
+                    hotfixDataMD5 = md5Hash.ToHexStringUnsafe();
+                    //hotfixDataMD5 = BitConverter.ToString(md5Hash).Replace("-", string.Empty).ToLower();
                 }
 
                 filteredList.Add(new HotfixEntry
@@ -112,18 +115,20 @@ namespace WoWTools.HotfixDumper
 
                 if (dumpKeys)
                 {
-                    if (!dbdCache.ContainsKey(hotfix.tableName) && File.Exists(Path.Combine(definitionDir, hotfix.tableName + ".dbd")))
+                    if (!dbdCache.ContainsKey(hotfix.tableName))
                     {
-                        var reader = new DBDReader();
-                        var dbd = reader.Read(Path.Combine(definitionDir, hotfix.tableName + ".dbd"));
-                        dbdCache.Add(hotfix.tableName, dbd);
+                        var dbdPath = Path.Combine(definitionDir, hotfix.tableName + ".dbd");
+                        if (File.Exists(dbdPath))
+                        {
+                            var reader = new DBDReader();
+                            var dbd2 = reader.Read(dbdPath);
+                            dbdCache.Add(hotfix.tableName, dbd2);
+                        }
                     }
 
-                    if (dbdCache.ContainsKey(hotfix.tableName) && hotfix.header.isValid == 1)
+                    if (hotfix.header.isValid == 1 && dbdCache.TryGetValue(hotfix.tableName, out var dbd))
                     {
-                        var dbd = dbdCache[hotfix.tableName];
                         VersionDefinitions? versionToUse = null;
-                        var buildFound = false;
 
                         foreach (var definition in dbd.versionDefinitions)
                         {
@@ -132,15 +137,14 @@ namespace WoWTools.HotfixDumper
                                 if (versionBuild.build == build)
                                 {
                                     versionToUse = definition;
-                                    buildFound = true;
                                 }
                             }
                         }
 
-                        if (buildFound)
+                        if (versionToUse.HasValue)
                         {
                             long dataLength = 0;
-                            var versionDef = (VersionDefinitions)versionToUse;
+                            var versionDef = versionToUse.Value;
                             //Console.WriteLine(hotfix.header.pad0 + " " + hotfix.header.pad1 + " " + hotfix.header.pad2 + " " + hotfix.tableName + " " + hotfix.header.recordID);
                             try
                             {
@@ -153,7 +157,7 @@ namespace WoWTools.HotfixDumper
 
                                         if (field.isNonInline && field.isID)
                                             continue;
-                                   
+
                                         if (field.arrLength > 0)
                                         {
                                             for (var i = 0; i < field.arrLength; i++)
@@ -214,22 +218,21 @@ namespace WoWTools.HotfixDumper
                                         if (tableHash == 0)
                                             continue;
 
-                                        if (!tableHashes.ContainsKey(tableHash))
+                                        if (tableHashes.TryGetValue(tableHash, out var tname))
                                         {
-                                            Console.WriteLine("Encountered an extra " + tableHash.ToString("X8") + " (unk table) record of " + (dataBin.BaseStream.Length - dataBin.BaseStream.Position) + " bytes in " + hotfix.tableName + " ID " + hotfix.header.recordID);
-                                        }
-                                        else
-                                        {
-                                            Console.WriteLine("Encountered an extra " + tableHashes[tableHash] + " record of " + (dataBin.BaseStream.Length - dataBin.BaseStream.Position) + " bytes in " + hotfix.tableName + " ID " + hotfix.header.recordID);
+                                            Console.WriteLine($"Encountered an extra {tname} record of {dataBin.BaseStream.Length - dataBin.BaseStream.Position} bytes in {hotfix.tableName} ID {hotfix.header.recordID}");
 
-                                            if (tableHashes[tableHash] == "TactKey")
+                                            if (tname == "TactKey")
                                             {
                                                 var lookup = dataBin.ReadUInt64();
                                                 var keyBytes = dataBin.ReadBytes(16);
-                                                Console.WriteLine(lookup.ToString("X8").PadLeft(16, '0') + " " + BitConverter.ToString(keyBytes).Replace("-", ""));
+                                                Console.WriteLine($"{lookup:X16} {BitConverter.ToString(keyBytes).Replace("-", "")}");
                                             }
                                         }
-                                        
+                                        else
+                                        {
+                                            Console.WriteLine($"Encountered an extra {tableHash:X8} (unk table) record of {dataBin.BaseStream.Length - dataBin.BaseStream.Position} bytes in {hotfix.tableName} ID {hotfix.header.recordID}");
+                                        }
                                     }
                                 }
                             }
@@ -244,19 +247,21 @@ namespace WoWTools.HotfixDumper
 
             var cache = new DBCache();
             cache.build = build;
-            cache.entries = filteredList.ToArray();
+            cache.entries = filteredList;
 
             if (!dumpKeys)
             {
-                Console.WriteLine(JsonConvert.SerializeObject(cache, Formatting.None));
+                //Console.WriteLine(JsonConvert.SerializeObject(cache, Formatting.None));
+                Console.WriteLine(System.Text.Json.JsonSerializer.Serialize(cache, new System.Text.Json.JsonSerializerOptions { IncludeFields = true }));
             }
         }
 
         private struct DBCache
         {
             public uint build;
-            public HotfixEntry[] entries;
+            public List<HotfixEntry> entries;
         }
+
         private struct HotfixEntry
         {
             public int pushID;
