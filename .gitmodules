@@ -1,0 +1,3 @@
+[submodule "DBDefsLib"]
+	path = DBDefsLib
+	url = https://github.com/wowdev/DBDefsLib.git
