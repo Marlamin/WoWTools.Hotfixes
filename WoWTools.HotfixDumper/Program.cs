@@ -16,18 +16,6 @@ namespace WoWTools.HotfixDumper
                 throw new ArgumentException("Need DBCache.bin location and DBef dir location!");
             }
 
-            // IDK, retail is on version 8 but doesnt have updated format, classic does, wtf
-            var classicBuildList = new List<uint>()
-            {
-                39570,
-                39618,
-                39658,
-                39688,
-                39757,
-                39801,
-                39832
-            };
-
             var actuallyV8 = false;
 
             var dumpKeys = false;
@@ -76,10 +64,37 @@ namespace WoWTools.HotfixDumper
 
                 build = bin.ReadUInt32();
 
-                if (classicBuildList.Contains(build))
-                    actuallyV8 = true;
-
                 var hash = bin.ReadBytes(32);
+
+                // --- Temporary code to detect if DBCache is actually V8 or not by checking if next hotfix magic is in the right spot or not
+                if(version == 8)
+                {
+                    var prePos = bin.BaseStream.Position;
+
+                    if (bin.ReadUInt32() != xfthMagic)
+                        throw new Exception("Invalid hotfix entry magic!");
+
+                    bin.ReadUInt32(); // PushID
+                    bin.ReadUInt32(); // UniqueID but also maybe not!
+                    bin.ReadUInt32(); // TableHash
+                    bin.ReadUInt32(); // RecordID
+
+                    var dataSize = bin.ReadInt32(); // DataSize
+
+                    bin.ReadBytes(dataSize + 4);
+
+                    if (bin.ReadUInt32() != xfthMagic)
+                    {
+                        actuallyV8 = false;
+                    }
+                    else
+                    {
+                        actuallyV8 = true;
+                    }
+
+                    bin.BaseStream.Position = prePos;
+                }
+                // -- End of temp code
 
                 while (bin.BaseStream.Length > bin.BaseStream.Position)
                 {
