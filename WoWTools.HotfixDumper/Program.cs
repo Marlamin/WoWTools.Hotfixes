@@ -16,6 +16,20 @@ namespace WoWTools.HotfixDumper
                 throw new ArgumentException("Need DBCache.bin location and DBef dir location!");
             }
 
+            // IDK, retail is on version 8 but doesnt have updated format, classic does, wtf
+            var classicBuildList = new List<uint>()
+            {
+                39570,
+                39618,
+                39658,
+                39688,
+                39757,
+                39801,
+                39832
+            };
+
+            var actuallyV8 = false;
+
             var dumpKeys = false;
             if(args.Length == 3 && args[2] == "true")
             {
@@ -57,30 +71,50 @@ namespace WoWTools.HotfixDumper
                     throw new Exception("Invalid hotfix file!");
 
                 var version = bin.ReadUInt32();
-                if (version != 7)
+                if (version != 7 && version != 8)
                     throw new Exception("Unsupported version: " + version);
 
                 build = bin.ReadUInt32();
+
+                if (classicBuildList.Contains(build))
+                    actuallyV8 = true;
 
                 var hash = bin.ReadBytes(32);
 
                 while (bin.BaseStream.Length > bin.BaseStream.Position)
                 {
                     var hotfix = new DBCacheEntry();
-                    hotfix.header = bin.Read<DBCacheEntryHeader>();
+                    hotfix.header = new DBCacheEntryHeader();
+
+                    hotfix.header.magic = bin.ReadUInt32();
+                    hotfix.header.pushID = bin.ReadInt32();
+
+                    if (actuallyV8)
+                        hotfix.header.uniqueID = bin.ReadUInt32();
+
+                    hotfix.header.tableHash = bin.ReadUInt32();
+                    hotfix.header.recordID = bin.ReadUInt32();
+                    hotfix.header.dataSize = bin.ReadInt32();
+                    hotfix.header.isValid = bin.ReadByte();
+                    hotfix.header.pad0 = bin.ReadByte();
+                    hotfix.header.pad1 = bin.ReadByte();
+                    hotfix.header.pad2 = bin.ReadByte();
+
+                    //hotfix.header = bin.Read<DBCacheEntryHeader>();
+
+                    if (hotfix.header.magic != xfthMagic)
+                        throw new Exception("Invalid hotfix entry magic!");
+
                     if (tableHashes.ContainsKey(hotfix.header.tableHash))
                     {
                         hotfix.tableName = tableHashes[hotfix.header.tableHash];
                     }
                     else
                     {
-                        hotfix.tableName = "UNKNOWN";
+                        hotfix.tableName = "UNKNOWN " + hotfix.header.tableHash.ToString("X8");
                     }
 
                     hotfix.data = bin.ReadBytes(hotfix.header.dataSize);
-
-                    if (hotfix.header.magic != xfthMagic)
-                        throw new Exception("Invalid hotfix entry magic!");
 
                     hotfixes.Add(hotfix);
                 }
@@ -266,10 +300,18 @@ namespace WoWTools.HotfixDumper
             public string dataMD5;
         }
 
+        private struct DBCacheEntry
+        {
+            public DBCacheEntryHeader header;
+            public string tableName;
+            public byte[] data;
+        }
+
         private struct DBCacheEntryHeader
         {
             public uint magic;
             public int pushID;
+            public uint uniqueID; // Uncomment when v8 change is live on ptr/retail
             public uint tableHash;
             public uint recordID;
             public int dataSize;
@@ -277,13 +319,6 @@ namespace WoWTools.HotfixDumper
             public byte pad0;
             public byte pad1;
             public byte pad2;
-        }
-
-        private struct DBCacheEntry
-        {
-            public DBCacheEntryHeader header;
-            public string tableName;
-            public byte[] data;
         }
     }
 }
