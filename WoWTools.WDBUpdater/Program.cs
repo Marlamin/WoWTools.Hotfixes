@@ -264,7 +264,7 @@ namespace WoWTools.WDBUpdater
                     {
                         if (!reader.HasRows)
                         {
-                            throw new Exception("Build not found in DB!");
+                            throw new Exception("Build " + build + " not found in DB!");
                         }
 
                         while (reader.Read())
@@ -667,7 +667,7 @@ namespace WoWTools.WDBUpdater
                 entries[id].Add("Action", bin.ReadCString());
                 entries[id].Add("Condition", bin.ReadCString());
 
-                var gameDataSize = 34;
+                var gameDataSize = 35;
                 for (var i = 0; i < gameDataSize; i++)
                 {
                     entries[id].Add("GameData[" + i  + "]", bin.ReadUInt32().ToString());
@@ -683,7 +683,7 @@ namespace WoWTools.WDBUpdater
                     entries[id].Add("QuestItems[" + i + "]", bin.ReadUInt32().ToString());
                 }
 
-                entries[id].Add("MinLevel", bin.ReadUInt32().ToString());
+                entries[id].Add("ContentTuningID", bin.ReadUInt32().ToString());
             }
 
             return entries;
