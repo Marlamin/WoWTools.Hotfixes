@@ -153,6 +153,7 @@ namespace WoWTools.HotfixDumper
                 filteredList.Add(new HotfixEntry
                 {
                     pushID = hotfix.header.pushID,
+                    uniqueID = hotfix.header.uniqueID,
                     recordID = hotfix.header.recordID,
                     isValid = hotfix.header.isValid,
                     tableName = hotfix.tableName,
@@ -310,6 +311,7 @@ namespace WoWTools.HotfixDumper
         {
             public int pushID;
             public uint recordID;
+            public uint uniqueID;
             public byte isValid;
             public string tableName;
             public string dataMD5;
