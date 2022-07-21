@@ -243,11 +243,11 @@ namespace WoWTools.WDBUpdater
             {
 #if DEBUG
                 Console.WriteLine("connectionstring.txt not found! Need this for build lookup, using hardcoded build.");
-                dbBuild.version = "9.0.1.35078";
-                dbBuild.expansion = 9;
-                dbBuild.major = 1;
+                dbBuild.version = "10.0.0.44649";
+                dbBuild.expansion = 10;
+                dbBuild.major = 0;
                 dbBuild.minor = 0;
-                dbBuild.build = 38312;
+                dbBuild.build = 44649;
                 return dbBuild;
 #else
                 throw new Exception("connectionstring.txt not found! Need this for build lookup.");
@@ -294,6 +294,8 @@ namespace WoWTools.WDBUpdater
                 if (length == 0)
                     break;
 
+                var posPreread = bin.BaseStream.Position;
+                
                 entries.Add(id, new Dictionary<string, string>());
                 entries[id].Add("QuestID", bin.ReadUInt32().ToString());
                 entries[id].Add("QuestType", bin.ReadUInt32().ToString());
@@ -400,15 +402,12 @@ namespace WoWTools.WDBUpdater
                 entries[id].Add("RewardNumSkillUps", bin.ReadUInt32().ToString());
                 entries[id].Add("PortraitGiverDisplayID", bin.ReadUInt32().ToString());
                 entries[id].Add("PortraitGiverMountDisplayID", bin.ReadUInt32().ToString());
+                entries[id].Add("PortraitTurnInDisplayID", bin.ReadUInt32().ToString());
 
-                // Might be a few fields off, so many 0s
-                if (wdb.buildInfo.expansion >= 9 && wdb.buildInfo.major >= 1)
+                if ((wdb.buildInfo.expansion >= 9 && wdb.buildInfo.major >= 1) || wdb.buildInfo.expansion >= 10)
                 {
                     entries[id].Add("PortraitModelSceneID", bin.ReadUInt32().ToString());
                 }
-
-                // Might be one or two fields off
-                entries[id].Add("PortraitTurnInDisplayID", bin.ReadUInt32().ToString());
 
                 for (var i = 0; i < 5; i++)
                 {
@@ -442,6 +441,13 @@ namespace WoWTools.WDBUpdater
                     entries[id].Add("ManagedWorldStateID", bin.ReadUInt32().ToString());
                     entries[id].Add("QuestSessionBonus", bin.ReadUInt32().ToString());
                 }
+                
+                if(wdb.buildInfo.expansion >= 10)
+                {
+                    entries[id].Add("Int_10_1", bin.ReadUInt32().ToString());
+                    entries[id].Add("Int_10_2", bin.ReadUInt32().ToString());
+                    entries[id].Add("Int_10_3", bin.ReadUInt32().ToString());
+                }
 
                 if (wdb.clientBuild >= 35078 && wdb.buildInfo.expansion >= 9)
                 {
@@ -463,7 +469,12 @@ namespace WoWTools.WDBUpdater
                 var PortraitTurnInTextLength = ds.GetIntByBits(10);
                 var PortraitTurnInNameLength = ds.GetIntByBits(8);
                 var QuestCompletionLogLength = ds.GetIntByBits(11);
-
+                if (wdb.buildInfo.expansion >= 10)
+                {
+                    var bool_10_1 = ds.GetBool();
+                }
+                ds.Flush();
+                
                 for (var i = 0; i < numObjectives; i++)
                 {
                     entries[id].Add("ObjectiveID[" + i + "]", bin.ReadUInt32().ToString());
@@ -496,6 +507,19 @@ namespace WoWTools.WDBUpdater
                 entries[id].Add("PortraitTurnInText", ds.GetString(PortraitTurnInTextLength).Trim('\0'));
                 entries[id].Add("PortraitTurnInName", ds.GetString(PortraitTurnInNameLength).Trim('\0'));
                 entries[id].Add("QuestCompletionLog", ds.GetString(QuestCompletionLogLength).Trim('\0'));
+
+                if(bin.BaseStream.Position != posPreread + length)
+                {
+                    if(bin.BaseStream.Position > posPreread + length)
+                    {
+                        throw new Exception("Quest " + id + " overshot reading, stopping");
+                    }
+                    else
+                    {
+                        //Console.WriteLine("[Quest ID " + id + "] Should be at position " + (posPreread + length) + " but am at " + bin.BaseStream.Position + " instead, fixing");
+                        bin.BaseStream.Position = posPreread + length;
+                    }
+                }
             }
 
             return entries;
@@ -577,10 +601,11 @@ namespace WoWTools.WDBUpdater
                 entries[id].Add("VignetteID", bin.ReadUInt32().ToString());
                 entries[id].Add("CreatureClassMask", bin.ReadUInt32().ToString());
 
-                if (wdb.buildInfo.expansion >= 9 && wdb.buildInfo.major >= 1)
+                if ((wdb.buildInfo.expansion >= 9 && wdb.buildInfo.major >= 1) || wdb.buildInfo.expansion >= 10)
                 {
                     entries[id].Add("CreatureDifficultyID", bin.ReadUInt32().ToString());
                 }
+
 
                 entries[id].Add("UIWidgetParentSetID", bin.ReadUInt32().ToString());
 
@@ -594,7 +619,6 @@ namespace WoWTools.WDBUpdater
                     entries[id].Add("BfA_Int_1", bin.ReadUInt32().ToString());
                     entries[id].Add("BfA_Int_2", bin.ReadUInt32().ToString());
                 }
-
                 entries[id].Add("Title", ds.GetString(TitleLength).Trim('\0'));
                 entries[id].Add("TitleAlt", ds.GetString(TitleAltLength).Trim('\0'));
 
