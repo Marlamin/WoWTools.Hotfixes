@@ -712,7 +712,7 @@ namespace WoWTools.WDBUpdater
                     wdb.buildInfo.build != 40593 && 
                     wdb.buildInfo.build != 40617 &&
                     wdb.buildInfo.build != 40618 &&
-                    wdb.buildInfo.build != 40752 &&
+                    wdb.buildInfo.build != 40725 &&
                     wdb.buildInfo.build != 40892 &&
                     wdb.buildInfo.build != 41446 &&
                     wdb.buildInfo.build != 41510)
