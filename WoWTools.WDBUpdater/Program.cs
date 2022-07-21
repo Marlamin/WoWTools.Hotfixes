@@ -87,7 +87,7 @@ namespace WoWTools.WDBUpdater
                         wdb.entries = ReadCreatureEntries(bin, wdb);
                         break;
                     case "WGOB": // Gameobject
-                        wdb.entries = ReadGameObjectEntries(bin);
+                        wdb.entries = ReadGameObjectEntries(bin, wdb);
                         break;
                     case "WPTX": // PageText
                         wdb.entries = ReadPageTextEntries(bin);
@@ -132,6 +132,10 @@ namespace WoWTools.WDBUpdater
                             case "WQST":
                                 targetTable = "quests";
                                 nameCol = "LogTitle";
+                                break;
+                            case "WGOB":
+                                targetTable = "gameobjects";
+                                nameCol = "Name[0]";
                                 break;
                             default:
                                 return;
@@ -665,7 +669,7 @@ namespace WoWTools.WDBUpdater
             return entries;
         }
 
-        public static Dictionary<string, Dictionary<string, string>> ReadGameObjectEntries(BinaryReader bin)
+        public static Dictionary<string, Dictionary<string, string>> ReadGameObjectEntries(BinaryReader bin, wdbCache wdb)
         {
             var entries = new Dictionary<string, Dictionary<string, string>>();
 
@@ -677,37 +681,63 @@ namespace WoWTools.WDBUpdater
                 if (length == 0)
                     break;
 
-                entries.Add(id, new Dictionary<string, string>());
-                entries[id].Add("Type", bin.ReadUInt32().ToString());
-                entries[id].Add("GameObjectDisplayID", bin.ReadUInt32().ToString());
+                var goEntry = new Dictionary<string, string>();
+                goEntry.Add("Type", bin.ReadUInt32().ToString());
+                goEntry.Add("GameObjectDisplayID", bin.ReadUInt32().ToString());
 
                 var nameSize = 4;
                 for(var i = 0; i < nameSize; i++)
                 {
-                    entries[id].Add("Name[" + i + "]", bin.ReadCString());
+                    goEntry.Add("Name[" + i + "]", bin.ReadCString());
                 }
+                
+                goEntry.Add("Icon", bin.ReadCString());
+                goEntry.Add("Action", bin.ReadCString());
+                goEntry.Add("Condition", bin.ReadCString());
 
-                entries[id].Add("Icon", bin.ReadCString());
-                entries[id].Add("Action", bin.ReadCString());
-                entries[id].Add("Condition", bin.ReadCString());
+                var gameDataSize = 34;
 
-                var gameDataSize = 35;
+                // This change somes in the middle of several branches being worked on at the same time :(
+                if (wdb.buildInfo.build > 40120 && 
+                    wdb.buildInfo.build != 40140 && 
+                    wdb.buildInfo.build != 40179 &&
+                    wdb.buildInfo.build != 40203 &&
+                    wdb.buildInfo.build != 40237 &&
+                    wdb.buildInfo.build != 40260 &&
+                    wdb.buildInfo.build != 40347 &&
+                    wdb.buildInfo.build != 40422 &&
+                    wdb.buildInfo.build != 40441 &&
+                    wdb.buildInfo.build != 40443 &&
+                    wdb.buildInfo.build != 40488 &&
+                    wdb.buildInfo.build != 40593 && 
+                    wdb.buildInfo.build != 40617 &&
+                    wdb.buildInfo.build != 40618 &&
+                    wdb.buildInfo.build != 40752 &&
+                    wdb.buildInfo.build != 40892 &&
+                    wdb.buildInfo.build != 41446 &&
+                    wdb.buildInfo.build != 41510)
+                {
+                    gameDataSize = 35;
+                }
+                
                 for (var i = 0; i < gameDataSize; i++)
                 {
-                    entries[id].Add("GameData[" + i  + "]", bin.ReadUInt32().ToString());
+                    goEntry.Add("GameData[" + i  + "]", bin.ReadUInt32().ToString());
                 }
 
-                entries[id].Add("Scale", bin.ReadSingle().ToString());
+                goEntry.Add("Scale", bin.ReadSingle().ToString());
                 
                 var numQuestItems = bin.ReadByte();
-                entries[id].Add("NumQuestItems", numQuestItems.ToString());
+                goEntry.Add("NumQuestItems", numQuestItems.ToString());
 
                 for(var i = 0; i < numQuestItems; i++)
                 {
-                    entries[id].Add("QuestItems[" + i + "]", bin.ReadUInt32().ToString());
+                    goEntry.Add("QuestItems[" + i + "]", bin.ReadUInt32().ToString());
                 }
 
-                entries[id].Add("ContentTuningID", bin.ReadUInt32().ToString());
+                goEntry.Add("ContentTuningID", bin.ReadUInt32().ToString());
+                
+                entries.TryAdd(id, goEntry);
             }
 
             return entries;
