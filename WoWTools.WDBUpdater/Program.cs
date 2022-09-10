@@ -290,6 +290,11 @@ namespace WoWTools.WDBUpdater
         {
             var entries = new Dictionary<string, Dictionary<string, string>>();
 
+            if (wdb.buildInfo.expansion == 1 || wdb.buildInfo.expansion == 2 || wdb.buildInfo.expansion == 3)
+            {
+                return entries;
+            }
+            
             while (bin.BaseStream.Position < bin.BaseStream.Length)
             {
                 var id = bin.ReadUInt32().ToString();
@@ -533,9 +538,8 @@ namespace WoWTools.WDBUpdater
         {
             var entries = new Dictionary<string, Dictionary<string, string>>();
 
-            if(wdb.buildInfo.expansion == 2)
+            if(wdb.buildInfo.expansion == 1 || wdb.buildInfo.expansion == 2 || wdb.buildInfo.expansion == 3)
             {
-                Console.WriteLine("Classic creature cache, skipping..");
                 return entries;
             }
 
