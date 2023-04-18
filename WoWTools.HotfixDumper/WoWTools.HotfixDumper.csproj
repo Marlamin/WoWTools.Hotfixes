@@ -6,8 +6,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="DBDefsLib" Version="1.0.0.18" />
-    <PackageReference Include="Newtonsoft.JSON" Version="12.0.2" />
+    <PackageReference Include="DBDefsLib" Version="1.0.0.20" />
+    <PackageReference Include="Newtonsoft.JSON" Version="13.0.3" />
   </ItemGroup>
 
 </Project>
