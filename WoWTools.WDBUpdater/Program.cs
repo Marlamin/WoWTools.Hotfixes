@@ -1,5 +1,4 @@
-﻿using MySql.Data.MySqlClient;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -117,7 +116,7 @@ namespace WoWTools.WDBUpdater
                 }
                 else if(outputType == "mysql")
                 {
-                    using (var connection = new MySqlConnection(File.ReadAllText("connectionstring.txt")))
+                    /*using (var connection = new MySqlConnection(File.ReadAllText("connectionstring.txt")))
                     {
                         connection.Open();
 
@@ -223,8 +222,8 @@ namespace WoWTools.WDBUpdater
                         Console.WriteLine("New entries: " + newEntries);
                         Console.WriteLine("Updated entries: " + updatedEntries);
                     }
+                    */
                 }
-
             }
         }
 
@@ -247,17 +246,17 @@ namespace WoWTools.WDBUpdater
             {
 #if DEBUG
                 Console.WriteLine("connectionstring.txt not found! Need this for build lookup, using hardcoded build.");
-                dbBuild.version = "10.0.0.44649";
+                dbBuild.version = "10.1.0.49407";
                 dbBuild.expansion = 10;
                 dbBuild.major = 0;
                 dbBuild.minor = 0;
-                dbBuild.build = 44649;
+                dbBuild.build = 49407;
                 return dbBuild;
 #else
                 throw new Exception("connectionstring.txt not found! Need this for build lookup.");
 #endif
             }
-
+            /*
             using (var connection = new MySqlConnection(File.ReadAllText("connectionstring.txt")))
             {
                 connection.Open();
@@ -282,6 +281,7 @@ namespace WoWTools.WDBUpdater
                     }
                 }
             }
+            */
 
             return dbBuild;
         }
@@ -464,6 +464,10 @@ namespace WoWTools.WDBUpdater
                     {
                         entries[id].Add("RewardDisplaySpellID[" + i + "]", bin.ReadUInt32().ToString());
                         entries[id].Add("RewardDisplayPlayerConditionID[" + i + "]", bin.ReadUInt32().ToString());
+                        if(wdb.buildInfo.expansion >= 10 && wdb.clientBuild >= 49039)
+                        {
+                            entries[id].Add("RewardDisplayUnk[" + i + "]", bin.ReadUInt32().ToString());
+                        }
                     }
                 }
 
