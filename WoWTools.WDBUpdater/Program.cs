@@ -1,11 +1,9 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace WoWTools.WDBUpdater
 {
@@ -40,16 +38,16 @@ namespace WoWTools.WDBUpdater
             }
 
             var outputType = "json";
-            if(args.Length == 2)
+            if (args.Length == 2)
             {
-                if(args[1].ToLower() == "mysql")
+                if (args[1].ToLower() == "mysql")
                 {
                     outputType = "mysql";
                 }
             }
 
             var wdb = new wdbCache();
-            
+
             using (var ms = new MemoryStream(File.ReadAllBytes(args[0])))
             using (var bin = new BinaryReader(ms))
             {
@@ -102,7 +100,7 @@ namespace WoWTools.WDBUpdater
                         break;
                 }
 
-    
+
                 var storageJsonOptions = new JsonSerializerOptions
                 {
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -114,7 +112,7 @@ namespace WoWTools.WDBUpdater
                     var wdbJson = JsonSerializer.Serialize(wdb.entries, humanReadableJsonOptions);
                     Console.WriteLine(wdbJson);
                 }
-                else if(outputType == "mysql")
+                else if (outputType == "mysql")
                 {
                     /*using (var connection = new MySqlConnection(File.ReadAllText("connectionstring.txt")))
                     {
@@ -246,11 +244,11 @@ namespace WoWTools.WDBUpdater
             {
 #if DEBUG
                 Console.WriteLine("connectionstring.txt not found! Need this for build lookup, using hardcoded build.");
-                dbBuild.version = "10.1.0.49407";
+                dbBuild.version = "10.1.5.50401";
                 dbBuild.expansion = 10;
-                dbBuild.major = 0;
-                dbBuild.minor = 0;
-                dbBuild.build = 49407;
+                dbBuild.major = 1;
+                dbBuild.minor = 5;
+                dbBuild.build = 50401;
                 return dbBuild;
 #else
                 throw new Exception("connectionstring.txt not found! Need this for build lookup.");
@@ -294,7 +292,7 @@ namespace WoWTools.WDBUpdater
             {
                 return entries;
             }
-            
+
             while (bin.BaseStream.Position < bin.BaseStream.Length)
             {
                 var id = bin.ReadUInt32().ToString();
@@ -304,11 +302,11 @@ namespace WoWTools.WDBUpdater
                     break;
 
                 var posPreread = bin.BaseStream.Position;
-                
+
                 entries.Add(id, new Dictionary<string, string>());
                 entries[id].Add("QuestID", bin.ReadUInt32().ToString());
                 entries[id].Add("QuestType", bin.ReadUInt32().ToString());
-                
+
                 if (wdb.recordVersion <= 12 && wdb.buildInfo.expansion < 9)
                 {
                     // Removed in 9.0.1.33978 - without a RecordVersion change
@@ -356,7 +354,7 @@ namespace WoWTools.WDBUpdater
                 entries[id].Add("RewardBonusMoney", bin.ReadUInt32().ToString());
 
                 uint rewardDisplaySpellCount = 0;
-                if(wdb.clientBuild >= 35078 && wdb.buildInfo.expansion >= 9)
+                if (wdb.clientBuild >= 35078 && wdb.buildInfo.expansion >= 9)
                 {
                     rewardDisplaySpellCount = bin.ReadUInt32();
                     entries[id].Add("RewardDisplaySpellCount", rewardDisplaySpellCount.ToString());
@@ -437,12 +435,17 @@ namespace WoWTools.WDBUpdater
                 entries[id].Add("AcceptedSoundKitID", bin.ReadUInt32().ToString());
                 entries[id].Add("CompleteSoundKitID", bin.ReadUInt32().ToString());
                 entries[id].Add("AreaGroupID", bin.ReadUInt32().ToString());
-                entries[id].Add("TimeAllowed", bin.ReadUInt32().ToString());
+
+                if (wdb.buildInfo.expansion >= 10 && wdb.clientBuild >= 49516)
+                    entries[id].Add("TimeAllowed", bin.ReadUInt64().ToString());
+                else
+                    entries[id].Add("TimeAllowed", bin.ReadUInt32().ToString());
 
                 var numObjectives = bin.ReadUInt32();
                 entries[id].Add("NumObjectives", numObjectives.ToString());
+
                 entries[id].Add("RaceFlags", bin.ReadUInt64().ToString());
-                entries[id].Add("QuestRewardID", bin.ReadUInt32().ToString());
+                entries[id].Add("QuestRewardID", bin.ReadInt32().ToString());
                 entries[id].Add("ExpansionID", bin.ReadUInt32().ToString());
 
                 if (wdb.recordVersion > 11)
@@ -450,12 +453,14 @@ namespace WoWTools.WDBUpdater
                     entries[id].Add("ManagedWorldStateID", bin.ReadUInt32().ToString());
                     entries[id].Add("QuestSessionBonus", bin.ReadUInt32().ToString());
                 }
-                
-                if(wdb.buildInfo.expansion >= 10)
+
+                uint numConditionalQuestDescription = 0;
+                uint numConditionalQuestCompletion = 0;
+                if (wdb.buildInfo.expansion >= 10)
                 {
-                    entries[id].Add("Int_10_1", bin.ReadUInt32().ToString());
-                    entries[id].Add("Int_10_2", bin.ReadUInt32().ToString());
-                    entries[id].Add("Int_10_3", bin.ReadUInt32().ToString());
+                    entries[id].Add("QuestGiverCreatureID", bin.ReadUInt32().ToString());
+                    numConditionalQuestDescription = bin.ReadUInt32();
+                    numConditionalQuestCompletion = bin.ReadUInt32();
                 }
 
                 if (wdb.clientBuild >= 35078 && wdb.buildInfo.expansion >= 9)
@@ -464,9 +469,9 @@ namespace WoWTools.WDBUpdater
                     {
                         entries[id].Add("RewardDisplaySpellID[" + i + "]", bin.ReadUInt32().ToString());
                         entries[id].Add("RewardDisplayPlayerConditionID[" + i + "]", bin.ReadUInt32().ToString());
-                        if(wdb.buildInfo.expansion >= 10 && wdb.clientBuild >= 49039)
+                        if (wdb.buildInfo.expansion >= 10 && wdb.clientBuild >= 49039)
                         {
-                            entries[id].Add("RewardDisplayUnk[" + i + "]", bin.ReadUInt32().ToString());
+                            entries[id].Add("RewardDisplaySpellType[" + i + "]", bin.ReadUInt32().ToString());
                         }
                     }
                 }
@@ -482,12 +487,12 @@ namespace WoWTools.WDBUpdater
                 var PortraitTurnInTextLength = ds.GetIntByBits(10);
                 var PortraitTurnInNameLength = ds.GetIntByBits(8);
                 var QuestCompletionLogLength = ds.GetIntByBits(11);
+
                 if (wdb.buildInfo.expansion >= 10)
-                {
-                    var bool_10_1 = ds.GetBool();
-                }
+                    entries[id].Add("ReadyForTranslation", ds.GetBool().ToString());
+
                 ds.Flush();
-                
+
                 for (var i = 0; i < numObjectives; i++)
                 {
                     entries[id].Add("ObjectiveID[" + i + "]", bin.ReadUInt32().ToString());
@@ -502,7 +507,7 @@ namespace WoWTools.WDBUpdater
                     var numVisualEffects = bin.ReadUInt32();
                     entries[id].Add("ObjectiveNumVisualEffects[" + i + "]", numVisualEffects.ToString());
 
-                    for(var j = 0; j < numVisualEffects; j++)
+                    for (var j = 0; j < numVisualEffects; j++)
                     {
                         entries[id].Add("ObjectiveVisualEffects[" + i + "][" + j + "]", bin.ReadUInt32().ToString());
                     }
@@ -520,16 +525,35 @@ namespace WoWTools.WDBUpdater
                 entries[id].Add("PortraitTurnInText", ds.GetString(PortraitTurnInTextLength).Trim('\0'));
                 entries[id].Add("PortraitTurnInName", ds.GetString(PortraitTurnInNameLength).Trim('\0'));
                 entries[id].Add("QuestCompletionLog", ds.GetString(QuestCompletionLogLength).Trim('\0'));
+                ds.Flush();
 
-                if(bin.BaseStream.Position != posPreread + length)
+                for(var i = 0; i < numConditionalQuestDescription; i++)
                 {
-                    if(bin.BaseStream.Position > posPreread + length)
+                    entries[id].Add("ConditionalQuestDescPlayerConditionID[" + i + "]", bin.ReadUInt32().ToString());
+                    entries[id].Add("ConditionalQuestDescQuestGiverCreatureID[" + i + "]", bin.ReadUInt32().ToString());
+                    var conditionalQuestDescLength = ds.GetIntByBits(12);
+                    ds.Flush();
+                    entries[id].Add("ConditionalQuestDesc[" + i + "]", ds.GetString(conditionalQuestDescLength).Trim('\0'));
+                }
+
+                for (var i = 0; i < numConditionalQuestCompletion; i++)
+                {
+                    entries[id].Add("ConditionalQuestComplPlayerConditionID[" + i + "]", bin.ReadUInt32().ToString());
+                    entries[id].Add("ConditionalQuestComplQuestGiverCreatureID[" + i + "]", bin.ReadUInt32().ToString());
+                    var conditionalQuestDescLength = ds.GetIntByBits(12);
+                    ds.Flush();
+                    entries[id].Add("ConditionalQuestCompl[" + i + "]", ds.GetString(conditionalQuestDescLength).Trim('\0'));
+                }
+
+                if (bin.BaseStream.Position != posPreread + length)
+                {
+                    if (bin.BaseStream.Position > posPreread + length)
                     {
                         throw new Exception("Quest " + id + " overshot reading, stopping");
                     }
                     else
                     {
-                        //Console.WriteLine("[Quest ID " + id + "] Should be at position " + (posPreread + length) + " but am at " + bin.BaseStream.Position + " instead, fixing");
+                        Console.WriteLine("[Quest ID " + id + "] Should be at position " + (posPreread + length) + " but am at " + bin.BaseStream.Position + " instead, fixing");
                         bin.BaseStream.Position = posPreread + length;
                     }
                 }
@@ -542,7 +566,7 @@ namespace WoWTools.WDBUpdater
         {
             var entries = new Dictionary<string, Dictionary<string, string>>();
 
-            if(wdb.buildInfo.expansion == 1 || wdb.buildInfo.expansion == 2 || wdb.buildInfo.expansion == 3)
+            if (wdb.buildInfo.expansion == 1 || wdb.buildInfo.expansion == 2 || wdb.buildInfo.expansion == 3)
             {
                 return entries;
             }
@@ -594,7 +618,7 @@ namespace WoWTools.WDBUpdater
                 entries[id].Add("NumCreatureDisplays", numCreatureDisplays.ToString());
                 entries[id].Add("TotalProbability", bin.ReadSingle().ToString());
 
-                for(var i = 0; i < numCreatureDisplays; i++)
+                for (var i = 0; i < numCreatureDisplays; i++)
                 {
                     entries[id].Add("CreatureDisplayInfoID[" + i + "]", bin.ReadUInt32().ToString());
                     entries[id].Add("CreatureScale[" + i + "]", bin.ReadSingle().ToString());
@@ -634,7 +658,7 @@ namespace WoWTools.WDBUpdater
                 entries[id].Add("Title", ds.GetString(TitleLength).Trim('\0'));
                 entries[id].Add("TitleAlt", ds.GetString(TitleAltLength).Trim('\0'));
 
-                if(CursorNameLength != 1)
+                if (CursorNameLength != 1)
                 {
                     entries[id].Add("CursorName", ds.GetString(CursorNameLength).Trim('\0'));
                 }
@@ -681,7 +705,7 @@ namespace WoWTools.WDBUpdater
         {
             var entries = new Dictionary<string, Dictionary<string, string>>();
 
-            while(bin.BaseStream.Position < bin.BaseStream.Length)
+            while (bin.BaseStream.Position < bin.BaseStream.Length)
             {
                 var id = bin.ReadUInt32().ToString();
                 var length = bin.ReadUInt32();
@@ -694,11 +718,11 @@ namespace WoWTools.WDBUpdater
                 goEntry.Add("GameObjectDisplayID", bin.ReadUInt32().ToString());
 
                 var nameSize = 4;
-                for(var i = 0; i < nameSize; i++)
+                for (var i = 0; i < nameSize; i++)
                 {
                     goEntry.Add("Name[" + i + "]", bin.ReadCString());
                 }
-                
+
                 goEntry.Add("Icon", bin.ReadCString());
                 goEntry.Add("Action", bin.ReadCString());
                 goEntry.Add("Condition", bin.ReadCString());
@@ -706,8 +730,8 @@ namespace WoWTools.WDBUpdater
                 var gameDataSize = 34;
 
                 // This change somes in the middle of several branches being worked on at the same time :(
-                if (wdb.buildInfo.build > 40120 && 
-                    wdb.buildInfo.build != 40140 && 
+                if (wdb.buildInfo.build > 40120 &&
+                    wdb.buildInfo.build != 40140 &&
                     wdb.buildInfo.build != 40179 &&
                     wdb.buildInfo.build != 40203 &&
                     wdb.buildInfo.build != 40237 &&
@@ -717,7 +741,7 @@ namespace WoWTools.WDBUpdater
                     wdb.buildInfo.build != 40441 &&
                     wdb.buildInfo.build != 40443 &&
                     wdb.buildInfo.build != 40488 &&
-                    wdb.buildInfo.build != 40593 && 
+                    wdb.buildInfo.build != 40593 &&
                     wdb.buildInfo.build != 40617 &&
                     wdb.buildInfo.build != 40618 &&
                     wdb.buildInfo.build != 40725 &&
@@ -727,24 +751,24 @@ namespace WoWTools.WDBUpdater
                 {
                     gameDataSize = 35;
                 }
-                
+
                 for (var i = 0; i < gameDataSize; i++)
                 {
-                    goEntry.Add("GameData[" + i  + "]", bin.ReadUInt32().ToString());
+                    goEntry.Add("GameData[" + i + "]", bin.ReadUInt32().ToString());
                 }
 
                 goEntry.Add("Scale", bin.ReadSingle().ToString());
-                
+
                 var numQuestItems = bin.ReadByte();
                 goEntry.Add("NumQuestItems", numQuestItems.ToString());
 
-                for(var i = 0; i < numQuestItems; i++)
+                for (var i = 0; i < numQuestItems; i++)
                 {
                     goEntry.Add("QuestItems[" + i + "]", bin.ReadUInt32().ToString());
                 }
 
                 goEntry.Add("ContentTuningID", bin.ReadUInt32().ToString());
-                
+
                 entries.TryAdd(id, goEntry);
             }
 
