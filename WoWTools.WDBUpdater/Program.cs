@@ -243,11 +243,11 @@ namespace WoWTools.WDBUpdater
             if (!File.Exists("connectionstring.txt"))
             {
                 Console.WriteLine("connectionstring.txt not found! Need this for build lookup, using hardcoded build.");
-                dbBuild.version = "10.1.5.50401";
+                dbBuild.version = "10.2.0.51521";
                 dbBuild.expansion = 10;
-                dbBuild.major = 1;
-                dbBuild.minor = 5;
-                dbBuild.build = 50401;
+                dbBuild.major = 2;
+                dbBuild.minor = 0;
+                dbBuild.build = 51521;
                 return dbBuild;
             }
             /*
