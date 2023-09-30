@@ -42,7 +42,10 @@ namespace WoWTools.WDBUpdater
             };
 
             if (args.Length == 0)
-                throw new Exception("Arguments: <wdbpath> (build in x.x.x.xxxxx format, uses " + targetBuild.version + "by default)");
+            {
+                Console.WriteLine("Arguments: <wdbpath> (optional build in x.x.x.xxxxx format, uses " + targetBuild.version + " by default)");
+                return;
+            }
 
             if (args.Length == 2)
             {
