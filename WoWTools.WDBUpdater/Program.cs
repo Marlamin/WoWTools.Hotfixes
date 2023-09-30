@@ -17,11 +17,11 @@ namespace WoWTools.WDBUpdater
             public uint recordSize;
             public uint recordVersion;
             public uint formatVersion;
-            public DBBuild buildInfo;
-            public Dictionary<string, Dictionary<string, string>> entries;
+            public Build buildInfo;
+            public Dictionary<uint, Dictionary<string, string>> entries;
         }
 
-        public struct DBBuild
+        public struct Build
         {
             public string version;
             public short expansion;
@@ -32,17 +32,32 @@ namespace WoWTools.WDBUpdater
 
         static void Main(string[] args)
         {
-            if (args.Length == 0)
+            Build targetBuild = new Build
             {
-                throw new Exception("Arguments: <wdbpath> (json (default)/mysql)");
-            }
+                version = "10.2.0.51521",
+                expansion = 10,
+                major = 2,
+                minor = 0,
+                build = 51521
+            };
 
-            var outputType = "json";
+            if (args.Length == 0)
+                throw new Exception("Arguments: <wdbpath> (build in x.x.x.xxxxx format, uses " + targetBuild.version + "by default)");
+
             if (args.Length == 2)
             {
-                if (args[1].ToLower() == "mysql")
+                var splitBuild = args[1].Trim().Split('.');
+                if (splitBuild.Length == 4)
                 {
-                    outputType = "mysql";
+                    targetBuild.version = args[1].Trim();
+                    targetBuild.expansion = short.Parse(splitBuild[0]);
+                    targetBuild.major = short.Parse(splitBuild[1]);
+                    targetBuild.minor = short.Parse(splitBuild[2]);
+                    targetBuild.build = int.Parse(splitBuild[3]);
+                }
+                else
+                {
+                    throw new Exception("Build must be in x.x.x.xxxxx format");
                 }
             }
 
@@ -57,7 +72,7 @@ namespace WoWTools.WDBUpdater
                 wdb.recordSize = bin.ReadUInt32();
                 wdb.recordVersion = bin.ReadUInt32();
                 wdb.formatVersion = bin.ReadUInt32();
-                wdb.buildInfo = GetBuildInfoFromDB(wdb.clientBuild);
+                wdb.buildInfo = targetBuild;
 
                 var humanReadableJsonOptions = new JsonSerializerOptions
                 {
@@ -67,17 +82,11 @@ namespace WoWTools.WDBUpdater
 
                 if (wdb.clientLocale != "enUS" && wdb.clientLocale != "enGB")
                 {
-                    if (outputType == "json")
-                    {
-                        var wdbJson = JsonSerializer.Serialize(new Dictionary<string, Dictionary<string, string>>(), humanReadableJsonOptions);
-                        Console.WriteLine(wdbJson);
-                    }
-
+                    Console.WriteLine(JsonSerializer.Serialize(new Dictionary<uint, Dictionary<string, string>>(), humanReadableJsonOptions));
                     return;
                 }
 
-                // All WDB structures below are based on Simca's excellent 010 template.
-
+                // All WDB structures below were originally based on Simca's excellent 010 template.
                 switch (wdb.identifier)
                 {
                     case "WMOB": // Creature
@@ -100,189 +109,19 @@ namespace WoWTools.WDBUpdater
                         break;
                 }
 
-
                 var storageJsonOptions = new JsonSerializerOptions
                 {
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                     WriteIndented = false
                 };
 
-                if (outputType == "json")
-                {
-                    var wdbJson = JsonSerializer.Serialize(wdb.entries, humanReadableJsonOptions);
-                    Console.WriteLine(wdbJson);
-                }
-                else if (outputType == "mysql")
-                {
-                    /*using (var connection = new MySqlConnection(File.ReadAllText("connectionstring.txt")))
-                    {
-                        connection.Open();
-
-                        string targetTable;
-                        string nameCol;
-                        switch (wdb.identifier)
-                        {
-                            case "WMOB":
-                                targetTable = "creatures";
-                                nameCol = "Name[0]";
-                                break;
-                            case "WQST":
-                                targetTable = "quests";
-                                nameCol = "LogTitle";
-                                break;
-                            case "WGOB":
-                                targetTable = "gameobjects";
-                                nameCol = "Name[0]";
-                                break;
-                            default:
-                                return;
-                        }
-
-                        var currentEntries = new Dictionary<uint, DBEntry>();
-                        using (var currentDataCmd = new MySqlCommand("SELECT id, name, firstseenbuild, lastupdatedbuild, json FROM " + targetTable, connection))
-                        using (var reader = currentDataCmd.ExecuteReader())
-                        {
-                            while (reader.Read())
-                            {
-                                var entry = new DBEntry()
-                                {
-                                    id = reader.GetUInt32(0),
-                                    name = reader.GetString(1),
-                                    firstSeenBuild = reader.GetUInt32(2),
-                                    lastUpdatedBuild = reader.GetUInt32(3),
-                                    json = reader.GetString(4)
-                                };
-
-                                currentEntries.Add(entry.id, entry);
-                            }
-                        }
-
-                        Console.WriteLine(currentEntries.Count + " entries in " + targetTable + " DB");
-                        Console.WriteLine(wdb.entries.Count + " entries in WDB file");
-
-                        var newEntries = 0;
-                        var updatedEntries = 0;
-
-                        using (var updateCmd = new MySqlCommand())
-                        using (var insertCmd = new MySqlCommand())
-                        {
-                            insertCmd.Connection = connection;
-                            insertCmd.CommandText = "INSERT INTO wowdata." + targetTable + " (id, name, firstseenbuild, lastupdatedbuild, json) VALUES (@id, @name, @firstseenbuild, @lastupdatedbuild, @json)";
-                            insertCmd.Parameters.AddWithValue("id", 0);
-                            insertCmd.Parameters.AddWithValue("name", "");
-                            insertCmd.Parameters.AddWithValue("firstseenbuild", wdb.clientBuild);
-                            insertCmd.Parameters.AddWithValue("lastupdatedbuild", wdb.clientBuild);
-                            insertCmd.Parameters.AddWithValue("json", "");
-
-                            updateCmd.Connection = connection;
-                            updateCmd.CommandText = "UPDATE wowdata." + targetTable + " SET name = @name, lastupdatedbuild = @lastupdatedbuild, json = @json WHERE ID = @id";
-                            updateCmd.Parameters.AddWithValue("id", 0);
-                            updateCmd.Parameters.AddWithValue("name", "");
-                            updateCmd.Parameters.AddWithValue("lastupdatedbuild", wdb.clientBuild);
-                            updateCmd.Parameters.AddWithValue("json", "");
-
-                            foreach (var entry in wdb.entries)
-                            {
-                                var properID = uint.Parse(entry.Key);
-                                var serializedJson = JsonSerializer.Serialize(entry.Value, storageJsonOptions);
-
-                                if (!currentEntries.TryGetValue(properID, out DBEntry dbEntry))
-                                {
-                                    Console.WriteLine(entry.Key + " is new, adding!");
-                                    insertCmd.Parameters["id"].Value = entry.Key;
-                                    insertCmd.Parameters["name"].Value = entry.Value[nameCol];
-                                    insertCmd.Parameters["json"].Value = serializedJson;
-                                    insertCmd.ExecuteNonQuery();
-                                    newEntries++;
-                                }
-                                else
-                                {
-                                    // Don't let classic or older builds overwrite existing records, will break classic updates, TODO: Needs proper checking between retail/ptr, maybe DBD build comparison code?
-                                    if (wdb.buildInfo.expansion == 1 && wdb.buildInfo.major == 13)
-                                        continue;
-
-                                    if (wdb.buildInfo.expansion == 2 && wdb.buildInfo.major == 5)
-                                        continue;
-
-                                    if (dbEntry.json != serializedJson && wdb.clientBuild > dbEntry.lastUpdatedBuild)
-                                    {
-                                        Console.WriteLine("JSON for " + entry.Key + " is changed updating! Before: \n " + dbEntry.json + "\n After: \n" + serializedJson);
-                                        updateCmd.Parameters["id"].Value = entry.Key;
-                                        updateCmd.Parameters["name"].Value = entry.Value[nameCol];
-                                        updateCmd.Parameters["json"].Value = serializedJson;
-                                        updateCmd.ExecuteNonQuery();
-                                        updatedEntries++;
-                                    }
-                                }
-                            }
-                        }
-
-                        Console.WriteLine("New entries: " + newEntries);
-                        Console.WriteLine("Updated entries: " + updatedEntries);
-                    }
-                    */
-                }
+                Console.WriteLine(JsonSerializer.Serialize(wdb.entries.OrderBy(x => x.Key).ToDictionary(x => x.Key, x => x.Value), humanReadableJsonOptions));
             }
         }
 
-        private struct DBEntry
+        private static Dictionary<uint, Dictionary<string, string>> ReadQuestEntries(BinaryReader bin, wdbCache wdb)
         {
-            public uint id;
-            public string name;
-            public uint firstSeenBuild;
-            public uint lastUpdatedBuild;
-            public string json;
-        }
-
-        private static DBBuild GetBuildInfoFromDB(uint build)
-        {
-
-
-            var dbBuild = new DBBuild();
-
-            if (!File.Exists("connectionstring.txt"))
-            {
-                Console.WriteLine("connectionstring.txt not found! Need this for build lookup, using hardcoded build.");
-                dbBuild.version = "10.2.0.51521";
-                dbBuild.expansion = 10;
-                dbBuild.major = 2;
-                dbBuild.minor = 0;
-                dbBuild.build = 51521;
-                return dbBuild;
-            }
-            /*
-            using (var connection = new MySqlConnection(File.ReadAllText("connectionstring.txt")))
-            {
-                connection.Open();
-                using (var buildCmd = new MySqlCommand("SELECT version, expansion, major, minor, build FROM casc.wow_builds WHERE build = @build", connection))
-                {
-                    buildCmd.Parameters.AddWithValue("build", build);
-                    using (var reader = buildCmd.ExecuteReader())
-                    {
-                        if (!reader.HasRows)
-                        {
-                            throw new Exception("Build " + build + " not found in DB!");
-                        }
-
-                        while (reader.Read())
-                        {
-                            dbBuild.version = reader.GetString(0);
-                            dbBuild.expansion = reader.GetInt16(1);
-                            dbBuild.major = reader.GetInt16(2);
-                            dbBuild.minor = reader.GetInt16(3);
-                            dbBuild.build = reader.GetInt32(4);
-                        }
-                    }
-                }
-            }
-            */
-
-            return dbBuild;
-        }
-
-        private static Dictionary<string, Dictionary<string, string>> ReadQuestEntries(BinaryReader bin, wdbCache wdb)
-        {
-            var entries = new Dictionary<string, Dictionary<string, string>>();
+            var entries = new Dictionary<uint, Dictionary<string, string>>();
 
             if (wdb.buildInfo.expansion == 1 || wdb.buildInfo.expansion == 2 || wdb.buildInfo.expansion == 3)
             {
@@ -291,7 +130,7 @@ namespace WoWTools.WDBUpdater
 
             while (bin.BaseStream.Position < bin.BaseStream.Length)
             {
-                var id = bin.ReadUInt32().ToString();
+                var id = bin.ReadUInt32();
                 var length = bin.ReadUInt32();
 
                 if (length == 0)
@@ -523,7 +362,7 @@ namespace WoWTools.WDBUpdater
                 entries[id].Add("QuestCompletionLog", ds.GetString(QuestCompletionLogLength).Trim('\0'));
                 ds.Flush();
 
-                for(var i = 0; i < numConditionalQuestDescription; i++)
+                for (var i = 0; i < numConditionalQuestDescription; i++)
                 {
                     entries[id].Add("ConditionalQuestDescPlayerConditionID[" + i + "]", bin.ReadUInt32().ToString());
                     entries[id].Add("ConditionalQuestDescQuestGiverCreatureID[" + i + "]", bin.ReadUInt32().ToString());
@@ -558,9 +397,9 @@ namespace WoWTools.WDBUpdater
             return entries;
         }
 
-        private static Dictionary<string, Dictionary<string, string>> ReadCreatureEntries(BinaryReader bin, wdbCache wdb)
+        private static Dictionary<uint, Dictionary<string, string>> ReadCreatureEntries(BinaryReader bin, wdbCache wdb)
         {
-            var entries = new Dictionary<string, Dictionary<string, string>>();
+            var entries = new Dictionary<uint, Dictionary<string, string>>();
 
             if (wdb.buildInfo.expansion == 1 || wdb.buildInfo.expansion == 2 || wdb.buildInfo.expansion == 3)
             {
@@ -569,7 +408,7 @@ namespace WoWTools.WDBUpdater
 
             while (bin.BaseStream.Position < bin.BaseStream.Length)
             {
-                var id = bin.ReadUInt32().ToString();
+                var id = bin.ReadUInt32();
                 var length = bin.ReadUInt32();
 
                 if (length == 0)
@@ -638,7 +477,6 @@ namespace WoWTools.WDBUpdater
                     entries[id].Add("CreatureDifficultyID", bin.ReadUInt32().ToString());
                 }
 
-
                 entries[id].Add("UIWidgetParentSetID", bin.ReadUInt32().ToString());
 
                 if (wdb.buildInfo.expansion >= 9)
@@ -651,6 +489,7 @@ namespace WoWTools.WDBUpdater
                     entries[id].Add("BfA_Int_1", bin.ReadUInt32().ToString());
                     entries[id].Add("BfA_Int_2", bin.ReadUInt32().ToString());
                 }
+
                 entries[id].Add("Title", ds.GetString(TitleLength).Trim('\0'));
                 entries[id].Add("TitleAlt", ds.GetString(TitleAltLength).Trim('\0'));
 
@@ -668,13 +507,13 @@ namespace WoWTools.WDBUpdater
             return entries;
         }
 
-        private static Dictionary<string, Dictionary<string, string>> ReadPageTextEntries(BinaryReader bin)
+        private static Dictionary<uint, Dictionary<string, string>> ReadPageTextEntries(BinaryReader bin)
         {
-            var entries = new Dictionary<string, Dictionary<string, string>>();
+            var entries = new Dictionary<uint, Dictionary<string, string>>();
 
             while (bin.BaseStream.Position < bin.BaseStream.Length)
             {
-                var id = bin.ReadUInt32().ToString();
+                var id = bin.ReadUInt32();
                 var length = bin.ReadUInt32();
 
                 if (length == 0)
@@ -697,13 +536,13 @@ namespace WoWTools.WDBUpdater
             return entries;
         }
 
-        public static Dictionary<string, Dictionary<string, string>> ReadGameObjectEntries(BinaryReader bin, wdbCache wdb)
+        public static Dictionary<uint, Dictionary<string, string>> ReadGameObjectEntries(BinaryReader bin, wdbCache wdb)
         {
-            var entries = new Dictionary<string, Dictionary<string, string>>();
+            var entries = new Dictionary<uint, Dictionary<string, string>>();
 
             while (bin.BaseStream.Position < bin.BaseStream.Length)
             {
-                var id = bin.ReadUInt32().ToString();
+                var id = bin.ReadUInt32();
                 var length = bin.ReadUInt32();
 
                 if (length == 0)
