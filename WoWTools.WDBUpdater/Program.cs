@@ -32,7 +32,7 @@ namespace WoWTools.WDBUpdater
 
         static void Main(string[] args)
         {
-            Build targetBuild = new Build
+            Build targetBuild = new()
             {
                 version = "10.2.0.51521",
                 expansion = 10,
@@ -443,6 +443,7 @@ namespace WoWTools.WDBUpdater
                 entries[id].Add("Name[3]", ds.GetString(Name3Length).Trim('\0'));
                 entries[id].Add("NameAlt[3]", ds.GetString(NameAlt3Length).Trim('\0'));
 
+                entries[id].Add("Leader", Leader.ToString());
                 entries[id].Add("Flags[0]", bin.ReadUInt32().ToString());
                 entries[id].Add("Flags[1]", bin.ReadUInt32().ToString());
 
@@ -551,9 +552,11 @@ namespace WoWTools.WDBUpdater
                 if (length == 0)
                     break;
 
-                var goEntry = new Dictionary<string, string>();
-                goEntry.Add("Type", bin.ReadUInt32().ToString());
-                goEntry.Add("GameObjectDisplayID", bin.ReadUInt32().ToString());
+                var goEntry = new Dictionary<string, string>
+                {
+                    { "Type", bin.ReadUInt32().ToString() },
+                    { "GameObjectDisplayID", bin.ReadUInt32().ToString() }
+                };
 
                 var nameSize = 4;
                 for (var i = 0; i < nameSize; i++)
