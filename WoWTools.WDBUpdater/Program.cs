@@ -683,8 +683,8 @@ namespace WoWTools.WDBUpdater
                 entries.Add(id, new Dictionary<string, string>());
                 entries[id].Add("PageTextID", bin.ReadUInt32().ToString());
                 entries[id].Add("NextPageTextID", bin.ReadUInt32().ToString());
-                entries[id].Add("unkInt", bin.ReadUInt32().ToString());
-                entries[id].Add("unkByte", bin.ReadByte().ToString());
+                entries[id].Add("PlayerConditionID", bin.ReadUInt32().ToString());
+                entries[id].Add("Flags", bin.ReadByte().ToString());
 
                 var ds = new DataStore(bin);
 
