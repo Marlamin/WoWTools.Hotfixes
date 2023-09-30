@@ -242,7 +242,6 @@ namespace WoWTools.WDBUpdater
 
             if (!File.Exists("connectionstring.txt"))
             {
-#if DEBUG
                 Console.WriteLine("connectionstring.txt not found! Need this for build lookup, using hardcoded build.");
                 dbBuild.version = "10.1.5.50401";
                 dbBuild.expansion = 10;
@@ -250,9 +249,6 @@ namespace WoWTools.WDBUpdater
                 dbBuild.minor = 5;
                 dbBuild.build = 50401;
                 return dbBuild;
-#else
-                throw new Exception("connectionstring.txt not found! Need this for build lookup.");
-#endif
             }
             /*
             using (var connection = new MySqlConnection(File.ReadAllText("connectionstring.txt")))
