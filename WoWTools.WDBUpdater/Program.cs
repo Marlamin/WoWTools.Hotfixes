@@ -77,18 +77,6 @@ namespace WoWTools.WDBUpdater
                 wdb.formatVersion = bin.ReadUInt32();
                 wdb.buildInfo = targetBuild;
 
-                var humanReadableJsonOptions = new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                    WriteIndented = true
-                };
-
-                if (wdb.clientLocale != "enUS" && wdb.clientLocale != "enGB")
-                {
-                    Console.WriteLine(JsonSerializer.Serialize(new Dictionary<uint, Dictionary<string, string>>(), humanReadableJsonOptions));
-                    return;
-                }
-
                 // All WDB structures below were originally based on Simca's excellent 010 template.
                 switch (wdb.identifier)
                 {
@@ -111,6 +99,12 @@ namespace WoWTools.WDBUpdater
                         Console.WriteLine("Unknown cache file: " + wdb.identifier);
                         break;
                 }
+
+                var humanReadableJsonOptions = new JsonSerializerOptions
+                {
+                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    WriteIndented = true
+                };
 
                 var storageJsonOptions = new JsonSerializerOptions
                 {
