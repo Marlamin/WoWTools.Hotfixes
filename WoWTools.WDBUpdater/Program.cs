@@ -34,11 +34,11 @@ namespace WoWTools.WDBUpdater
         {
             Build targetBuild = new()
             {
-                version = "10.2.0.51521",
+                version = "10.2.5.52902",
                 expansion = 10,
                 major = 2,
-                minor = 0,
-                build = 51521
+                minor = 5,
+                build = 52902
             };
 
             if (args.Length == 0)
@@ -464,6 +464,13 @@ namespace WoWTools.WDBUpdater
                 var numQuestItems = bin.ReadUInt32();
                 entries[id].Add("NumQuestItems", numQuestItems.ToString());
 
+                uint numCurrencyIDs = 0;
+                if(wdb.buildInfo.expansion > 10 || (wdb.buildInfo.expansion == 10 && wdb.buildInfo.major >= 2 && wdb.buildInfo.minor >= 5))
+                {
+                    numCurrencyIDs = bin.ReadUInt32();
+                    entries[id].Add("NumCurrencyIDs", numCurrencyIDs.ToString());
+                }
+
                 entries[id].Add("CreatureMovementInfoID", bin.ReadInt32().ToString());
                 entries[id].Add("RequiredExpansion", bin.ReadUInt32().ToString());
                 entries[id].Add("TrackingQuestID", bin.ReadUInt32().ToString());
@@ -499,6 +506,14 @@ namespace WoWTools.WDBUpdater
                 for (var i = 0; i < numQuestItems; i++)
                 {
                     entries[id].Add("QuestItemID[" + i + "]", bin.ReadUInt32().ToString());
+                }
+
+                if (wdb.buildInfo.expansion > 10 || (wdb.buildInfo.expansion == 10 && wdb.buildInfo.major >= 2 && wdb.buildInfo.minor >= 5))
+                {
+                    for (var i = 0; i < numCurrencyIDs; i++)
+                    {
+                        entries[id].Add("CurrencyID[" + i + "]", bin.ReadUInt32().ToString());
+                    }
                 }
             }
 

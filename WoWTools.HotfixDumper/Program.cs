@@ -59,7 +59,7 @@ namespace WoWTools.HotfixDumper
                     throw new Exception("Invalid hotfix file!");
 
                 var version = bin.ReadUInt32();
-                if (version != 7 && version != 8)
+                if (version != 7 && version != 8 && version != 9)
                     throw new Exception("Unsupported version: " + version);
 
                 build = bin.ReadUInt32();
@@ -102,9 +102,13 @@ namespace WoWTools.HotfixDumper
                     hotfix.header = new DBCacheEntryHeader();
 
                     hotfix.header.magic = bin.ReadUInt32();
+
+                    if (version == 9)
+                        bin.ReadInt32(); // Region
+
                     hotfix.header.pushID = bin.ReadInt32();
 
-                    if (actuallyV8)
+                    if (actuallyV8 || version == 9)
                         hotfix.header.uniqueID = bin.ReadUInt32();
 
                     hotfix.header.tableHash = bin.ReadUInt32();
