@@ -34,11 +34,11 @@ namespace WoWTools.WDBUpdater
         {
             Build targetBuild = new()
             {
-                version = "10.2.5.52902",
-                expansion = 10,
-                major = 2,
-                minor = 5,
-                build = 52902
+                version = "11.0.0.54311",
+                expansion = 11,
+                major = 0,
+                minor = 0,
+                build = 54311
             };
 
             if (args.Length == 0)
@@ -277,7 +277,18 @@ namespace WoWTools.WDBUpdater
                 entries[id].Add("NumObjectives", numObjectives.ToString());
 
                 entries[id].Add("RaceFlags", bin.ReadUInt64().ToString());
-                entries[id].Add("QuestRewardID", bin.ReadInt32().ToString());
+
+                uint treasurePickerIDCount = 0;
+                if(wdb.buildInfo.expansion >= 11)
+                {
+                    treasurePickerIDCount = bin.ReadUInt32();
+                    entries[id].Add("TreasurePickerIDCount", treasurePickerIDCount.ToString());
+                }
+                else
+                {
+                    entries[id].Add("QuestRewardID", bin.ReadUInt32().ToString());
+                }
+
                 entries[id].Add("ExpansionID", bin.ReadUInt32().ToString());
 
                 if (wdb.recordVersion > 11)
@@ -308,6 +319,14 @@ namespace WoWTools.WDBUpdater
                     }
                 }
 
+                if(wdb.buildInfo.expansion >= 11)
+                {
+                    for(int i = 0; i < treasurePickerIDCount; i++)
+                    {
+                        entries[id].Add("TreasurePickerID[" + i + "]", bin.ReadUInt32().ToString());
+                    }
+                }
+
                 var ds = new DataStore(bin);
 
                 var LogTitleLength = ds.GetIntByBits(9);
@@ -328,7 +347,11 @@ namespace WoWTools.WDBUpdater
                 for (var i = 0; i < numObjectives; i++)
                 {
                     entries[id].Add("ObjectiveID[" + i + "]", bin.ReadUInt32().ToString());
-                    entries[id].Add("ObjectiveType[" + i + "]", bin.ReadByte().ToString());
+                    if(wdb.buildInfo.expansion >= 11)
+                        entries[id].Add("ObjectiveType[" + i + "]", bin.ReadUInt32().ToString());
+                    else
+                        entries[id].Add("ObjectiveType[" + i + "]", bin.ReadByte().ToString());
+
                     entries[id].Add("ObjectiveStorageIndex[" + i + "]", bin.ReadByte().ToString());
                     entries[id].Add("ObjectiveObjectID[" + i + "]", bin.ReadUInt32().ToString());
                     entries[id].Add("ObjectiveAmount[" + i + "]", bin.ReadUInt32().ToString());
