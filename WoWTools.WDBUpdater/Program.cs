@@ -464,9 +464,18 @@ namespace WoWTools.WDBUpdater
                 entries[id].Add("Flags[0]", bin.ReadUInt32().ToString());
                 entries[id].Add("Flags[1]", bin.ReadUInt32().ToString());
 
-                entries[id].Add("CreatureType", bin.ReadUInt32().ToString());
+                if(wdb.buildInfo.expansion < 11 || (wdb.buildInfo.expansion == 11 && wdb.buildInfo.major == 0))
+                    entries[id].Add("CreatureType", bin.ReadUInt32().ToString());
+                else
+                    entries[id].Add("CreatureType", bin.ReadByte().ToString());
+
                 entries[id].Add("CreatureFamily", bin.ReadUInt32().ToString());
-                entries[id].Add("Classification", bin.ReadUInt32().ToString());
+
+                if (wdb.buildInfo.expansion < 11 || (wdb.buildInfo.expansion == 11 && wdb.buildInfo.major == 0))
+                    entries[id].Add("Classification", bin.ReadUInt32().ToString());
+                else
+                    entries[id].Add("Classification", bin.ReadByte().ToString());
+                
                 entries[id].Add("ProxyCreatureID[0]", bin.ReadUInt32().ToString());
                 entries[id].Add("ProxyCreatureID[1]", bin.ReadUInt32().ToString());
 
